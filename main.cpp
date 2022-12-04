@@ -26,14 +26,20 @@
 #include "print_highlevel_code.h"
 #include "print_lowlevel_code.h"
 #include "exceptions.h"
+#include "cfg.h"
+#include "print_cfg.h"
 
 void usage() {
   fprintf(stderr, "Usage: nearly_cc [options...] <filename>\n"
                   "Options:\n"
                   "  -l   print tokens\n"
                   "  -p   print parse tree\n"
+                  "  -C   print CFG of high-level code\n"
+                  "  -c   print CFG of low-level code\n"
+                  "  -L   print CFG of high-level code with liveness info\n"
                   "  -a   perform semantic analysis, print symbol table\n"
-                  "  -h   print results of high-level code generation\n");
+                  "  -h   print results of high-level code generation\n"
+                  "  -o   enable code optimization\n");
   exit(1);
 }
 
@@ -42,10 +48,13 @@ enum class Mode {
   PRINT_PARSE_TREE,
   SEMANTIC_ANALYSIS,
   HIGHLEVEL_CODEGEN,
+  PRINT_HIGHLEVEL_CFG,
+  PRINT_LOWLEVEL_CFG,
+  PRINT_HIGHLEVEL_CFG_LIVENESS,
   COMPILE,
 };
 
-void process_source_file(const std::string &filename, Mode mode);
+void process_source_file(const std::string &filename, Mode mode, bool optimize);
 
 int main(int argc, char **argv) {
   if (argc < 2) {
@@ -53,6 +62,7 @@ int main(int argc, char **argv) {
   }
 
   Mode mode = Mode::COMPILE;
+  bool optimize = false;
 
   int index = 1;
   while (index < argc) {
@@ -61,10 +71,19 @@ int main(int argc, char **argv) {
       mode = Mode::PRINT_TOKENS;
     } else if (arg == "-p") {
       mode = Mode::PRINT_PARSE_TREE;
+    } else if (arg == "-C") {
+      mode = Mode::PRINT_HIGHLEVEL_CFG;
+    } else if (arg == "-c") {
+      mode = Mode::PRINT_LOWLEVEL_CFG;
+    } else if (arg == "-L") {
+      mode = Mode::PRINT_HIGHLEVEL_CFG_LIVENESS;
     } else if (arg == "-a") {
       mode = Mode::SEMANTIC_ANALYSIS;
     } else if (arg == "-h") {
       mode = Mode::HIGHLEVEL_CODEGEN;
+    } else if (arg == "-o") {
+      // enable code optimization
+      optimize = true;
     } else {
       break;
     }
@@ -77,7 +96,7 @@ int main(int argc, char **argv) {
 
   const char *filename = argv[index];
   try {
-    process_source_file(filename, mode);
+    process_source_file(filename, mode, optimize);
   } catch (BaseException &ex) {
     const Location &loc = ex.get_loc();
     if (loc.is_valid()) {
@@ -91,7 +110,7 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-void process_source_file(const std::string &filename, Mode mode) {
+void process_source_file(const std::string &filename, Mode mode, bool optimize) {
   Context ctx;
 
   if (mode == Mode::PRINT_TOKENS) {
@@ -116,16 +135,30 @@ void process_source_file(const std::string &filename, Mode mode) {
     } else if (mode >= Mode::SEMANTIC_ANALYSIS) {
       // Perform semantic analysis, print symbol table
       ctx.analyze();
+
       if (mode >= Mode::HIGHLEVEL_CODEGEN) {
         std::unique_ptr<ModuleCollector> module_collector;
 
         if (mode == Mode::HIGHLEVEL_CODEGEN) {
           module_collector.reset(new PrintHighLevelCode());
-          ctx.highlevel_codegen(module_collector.get());
+        } else  if (mode == Mode::PRINT_HIGHLEVEL_CFG) {
+          // print a high-level CFG for each function
+          module_collector.reset(new PrintHighLevelCFG());
+        } else if (mode == Mode::PRINT_LOWLEVEL_CFG) {
+          // print a low-level CFG for each function
+          module_collector.reset(new PrintLowLevelCFG());
+        } else if (mode == Mode::PRINT_HIGHLEVEL_CFG_LIVENESS) {
+          // print high-level CFG with liveness info for each function
+          module_collector.reset(new PrintHighLevelCFGWithLiveness());
         } else {
+          assert(mode == Mode::COMPILE);
           module_collector.reset(new PrintLowLevelCode());
-          ctx.lowlevel_codegen(module_collector.get());
         }
+
+        if (mode == Mode::COMPILE || mode == Mode::PRINT_LOWLEVEL_CFG)
+          ctx.lowlevel_codegen(module_collector.get(), optimize);
+        else
+          ctx.highlevel_codegen(module_collector.get());
       }
     }
   }

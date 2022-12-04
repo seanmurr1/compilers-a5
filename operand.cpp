@@ -74,7 +74,7 @@ Operand::Operand(Kind kind, long ival1)
   if (!props.is_non_reg()) {
     m_basereg = int(ival1);
   } else if (props.is_imm_ival()) {
-    m_imm_ival = int(ival1);
+    m_imm_ival = ival1;
   } else {
     assert(false);
   }
