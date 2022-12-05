@@ -263,7 +263,7 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
       } else {
         // Key present: replace instruction with copy
         Operand to_copy = lvn_map[key];
-        int mov_shift = get_opcode_offset(opcdoe);
+        int mov_shift = get_opcode_offset(opcode);
         HighLevelOpcode mov_opcode = (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
         result_iseq->append(new Instruction(mov_opcode, dest, to_copy));
       }
