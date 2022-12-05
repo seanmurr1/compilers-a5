@@ -18,30 +18,29 @@ class DeadStoreElimination : public ControlFlowGraphTransform {
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
 };
 
+enum Operator {
+  ADD,
+  SUB,
+  MUL,
+  DIV,
+  MOD,
+  GT,
+  GTE,
+  LT,
+  LTE,
+  EQ,
+  NEQ,
+};
 
 class LocalValueNumbering : public ControlFlowGraphTransform {
   private:
-    enum LVN_op {
-      ADD,
-      SUB,
-      MUL,
-      DIV,
-      MOD,
-      GT,
-      GTE,
-      LT,
-      LTE,
-      EQ,
-      NEQ,
-    };
-
     class LVN_key {
     public:
       Operand left;
       Operand right;
-      LVN_op op;
+      Operator op;
 
-      LVN_key(Operand l, Operand r, LVN_op o) : left(l), right(r), op(o) { }
+      LVN_key(Operand l, Operand r, Operator o) : left(l), right(r), op(o) { }
 
       bool operator==(const LVN_key &other) const {
         return (left == other.left && right == other.right && op == other.op);
@@ -60,6 +59,7 @@ class LocalValueNumbering : public ControlFlowGraphTransform {
     std::unordered_map<LVN_key, Operand, LVN_hasher> lvn_map;
 
     void constant_fold(std::shared_ptr<InstructionSequence> result_iseq, Instruction *orig_ins);
+    bool check_algebraic_identities(std::shared_ptr<InstructionSequence> result_iseq, Instruction *orig_ins);
 
   public:
     LocalValueNumbering(const std::shared_ptr<ControlFlowGraph> &cfg);

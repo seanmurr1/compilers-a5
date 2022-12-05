@@ -50,86 +50,225 @@ bool match_hl(int base, int hl_opcode) {
   return hl_opcode >= base && hl_opcode < (base + 4);
 }
 
+/**
+ * Gets shift from 'b' variant of a HL opcode.
+ **/
+int get_opcode_offset(HighLevelOpcode opcode) {
+
+  if (match_hl(HINS_add_b, opcode)) 
+    return opcode - HINS_add_b;
+  else if (match_hl(HINS_sub_b, opcode)) 
+    return opcode - HINS_sub_b;
+  else if (match_hl(HINS_mul_b, opcode)) 
+    return opcode - HINS_mul_b;
+  else if (match_hl(HINS_div_b, opcode)) 
+    return opcode - HINS_div_b;
+  else if (match_hl(HINS_mod_b, opcode)) 
+    return opcode - HINS_mod_b;
+  else if (match_hl(HINS_cmplt_b, opcode)) 
+    return opcode - HINS_cmplt_b;
+  else if (match_hl(HINS_cmplte_b, opcode)) 
+    return opcode - HINS_cmplte_b;
+  else if (match_hl(HINS_cmpgt_b, opcode)) 
+    return opcode - HINS_cmpgt_b;
+  else if (match_hl(HINS_cmpgte_b, opcode)) 
+    return opcode - HINS_cmpgte_b;
+  else if (match_hl(HINS_cmpeq_b, opcode)) 
+    return opcode - HINS_cmpeq_b;
+  else if (match_hl(HINS_cmpneq_b, opcode)) 
+    return opcode - HINS_cmpneq_b;
+  else 
+    assert(false);
+
+  // TODO: add more variants to check
+  return 0;
+}
+
+/**
+ * Gets operator type from a HL opcode.
+ **/
+Operator get_operator(HighLevelOpcode opcode) {
+
+  if (match_hl(HINS_add_b, opcode)) 
+    return Operator::ADD;
+  else if (match_hl(HINS_sub_b, opcode)) 
+    return Operator::SUB;
+  else if (match_hl(HINS_mul_b, opcode)) 
+    return Operator::MUL;
+  else if (match_hl(HINS_div_b, opcode)) 
+    return Operator::DIV;
+  else if (match_hl(HINS_mod_b, opcode)) 
+    return Operator::MOD;
+  else if (match_hl(HINS_cmplt_b, opcode)) 
+    return Operator::LT;
+  else if (match_hl(HINS_cmplte_b, opcode)) 
+    return Operator::LTE;
+  else if (match_hl(HINS_cmpgt_b, opcode)) 
+    return Operator::GT;
+  else if (match_hl(HINS_cmpgte_b, opcode)) 
+    return Operator::GTE;
+  else if (match_hl(HINS_cmpeq_b, opcode)) 
+    return Operator::EQ;
+  else if (match_hl(HINS_cmpneq_b, opcode)) 
+    return Operator::NEQ;
+  else 
+    assert(false);
+
+}
+
 void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> result_iseq, Instruction *orig_ins) {
   HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
   Operand dest = orig_ins->get_operand(0);
   int left = orig_ins->get_operand(1).get_imm_ival();
   int right = orig_ins->get_operand(2).get_imm_ival();
+  int mov_shift = get_opcode_offset(opcode);
+  Operator op = get_operator(opcode);
   int result;
-  int mov_shift;
 
-  if (match_hl(HINS_add_b, opcode)) {
-    result = left + right;
-    mov_shift = opcode - HINS_add_b;
-  } else if (match_hl(HINS_sub_b, opcode)) {
-    result = left - right;
-    mov_shift = opcode - HINS_sub_b;
-  } else if (match_hl(HINS_mul_b, opcode)) {
-    result = left * right;    
-    mov_shift = opcode - HINS_mul_b;
-  } else if (match_hl(HINS_div_b, opcode)) {
-    result = left / right;
-    mov_shift = opcode - HINS_div_b;
-  } else if (match_hl(HINS_mod_b, opcode)) {
-    result = left % right;
-    mov_shift = opcode - HINS_mod_b;
-  } else if (match_hl(HINS_cmplt_b, opcode)) {
-    result = left < right;
-    mov_shift = opcode - HINS_cmplt_b;
-  } else if (match_hl(HINS_cmplte_b, opcode)) {
-    result = left <= right;
-    mov_shift = opcode - HINS_cmplte_b;
-  } else if (match_hl(HINS_cmpgt_b, opcode)) {
-    result = left > right;
-    mov_shift = opcode - HINS_cmpgt_b;
-  } else if (match_hl(HINS_cmpgte_b, opcode)) {
-    result = left >= right;
-    mov_shift = opcode - HINS_cmpgte_b;
-  } else if (match_hl(HINS_cmpeq_b, opcode)) {
-    result = left == right;
-    mov_shift = opcode - HINS_cmpeq_b;
-  } else if (match_hl(HINS_cmpneq_b, opcode)) {
-    result = left != right;
-    mov_shift = opcode - HINS_cmpneq_b;
-  } else 
-    assert(false);
+  switch (op) {
+    case Operator::ADD:
+      result = left + right;
+      break;
+    case Operator::SUB:
+      result = left - right;
+      break;
+    case Operator::MUL:
+      result = left * right;
+      break;
+    case Operator::DIV:
+      result = left / right;
+      break;
+    case Operator::MOD:
+      result = left % right;
+      break;
+    case Operator::GT:
+      result = left > right;
+      break;
+    case Operator::GTE:
+      result = left >= right;
+      break;
+    case Operator::LT:
+      result = left < right;
+      break;
+    case Operator::LTE:
+      result = left <= right;
+      break;
+    case Operator::EQ:
+      result = left == right;
+      break;
+    case Operator::NEQ:
+      result = left != right;
+      break;
+    default:
+      break;
+  }
 
   HighLevelOpcode mov_opcode = (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
-
   result_iseq->append(new Instruction(mov_opcode, dest, Operand(Operand::IMM_IVAL, result)));
+}
+
+bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<InstructionSequence> result_iseq, Instruction *orig_ins) {
+  HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
+  Operand dest = orig_ins->get_operand(0);
+  Operand left = orig_ins->get_operand(1);
+  Operand right = orig_ins->get_operand(2);
+
+  int mov_shift = get_opcode_offset(opcode);
+  Operator op = get_operator(opcode);
+  HighLevelOpcode mov_opcode = (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
+
+  if (op == Operator::ADD) {
+    // Identity: add zero
+    if (left.has_imm_ival() && left.get_imm_ival() == 0) {
+      result_iseq->append(new Instruction(mov_opcode, dest, right));
+      return true;
+    } else if (right.has_imm_ival() && right.get_imm_ival() == 0) {
+      result_iseq->append(new Instruction(mov_opcode, dest, left));
+      return true;
+    }
+  } else if (op == Operator::SUB) {
+    // Identity: sub zero
+    if (right.has_imm_ival() && right.get_imm_ival() == 0) {
+      result_iseq->append(new Instruction(mov_opcode, dest, left));
+      return true;
+    } 
+    // TODO: 0 - R => but we would need to emit negate instruction...?
+  } else if (op == Operator::MUL) {
+    // Identity: multiply by one
+    if (left.has_imm_ival() && left.get_imm_ival() == 1) {
+      result_iseq->append(new Instruction(mov_opcode, dest, right));
+      return true;
+    } else if (right.has_imm_ival() && right.get_imm_ival() == 1) {
+      result_iseq->append(new Instruction(mov_opcode, dest, left));
+      return true;
+    }
+  } else if (op == Operator::DIV) {
+    // Identity: divide by one
+    if (right.has_imm_ival() && right.get_imm_ival() == 1) {
+      result_iseq->append(new Instruction(mov_opcode, dest, left));
+      return true;
+    }
+  } else if (op == Operator::MOD) {
+    // Identity: mod by one 
+    if (right.has_imm_ival() && right.get_imm_ival() == 1) {
+      result_iseq->append(new Instruction(mov_opcode, dest, Operand(Operand::IMM_IVAL, 0)));
+      return true;
+    }
+  }
+
+  return false;
 }
 
 
 std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(const InstructionSequence *orig_bb) {
   // TODO
+  // Clear map first
+  lvn_map.clear();
+
   std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
 
   for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
     Instruction *orig_ins = *i;
 
     if (HighLevel::is_def(orig_ins)) {
-      Operand dest = orig_ins->get_operand(0);
-      unsigned num_operands = orig_ins->get_num_operands();
-
       // For now assume num_operands = 2 (maybe deal with unary expressions later)
+      unsigned num_operands = orig_ins->get_num_operands();
       if (num_operands != 2) continue;
 
+      Operand dest = orig_ins->get_operand(0);
       Operand left = orig_ins->get_operand(1);
       Operand right = orig_ins->get_operand(2);
 
       if (left.is_imm_ival() && right.is_imm_ival()) {
         // Constant folding 
-        // TODO
         constant_fold(result_iseq, orig_ins);
         continue;
       }
-      // TODO algebraic identities
 
-      
+      // Algebraic identities
+      if (check_algebraic_identities(result_iseq, orig_ins))
+        continue;      
 
+      // TODO commutativity?
 
-      HighLevel::is_use(orig_ins, 5);
+      // LVN part
+      HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
+      Operator op = get_operator(opcode);
+      // Create hash key
+      LVN_key key(left, right, op);
 
+      if (lvn_map.count(key) == 0) {
+        // Key not present: append original instruction
+        result_iseq->append(orig_ins->duplicate());
+      } else {
+        // Key present: replace instruction with copy
+        Operand to_copy = lvn_map[key];
+        int mov_shift = get_opcode_offset(opcdoe);
+        HighLevelOpcode mov_opcode = (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
+        result_iseq->append(new Instruction(mov_opcode, dest, to_copy));
+      }
+      // Update map
+      lvn_map[key] = dest;
     }
 
   }
