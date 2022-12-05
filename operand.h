@@ -57,6 +57,9 @@ public:
 
   // use compiler-generated copy ctor and assignment op
 
+  bool operator==(const Operand &other) const;
+  std::size_t hash() const;
+
   Kind get_kind() const;
 
   // Is the operand an immediate integer value?

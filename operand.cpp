@@ -107,6 +107,30 @@ Operand::Operand(Kind kind, const std::string &label)
 Operand::~Operand() {
 }
 
+bool Operand::operator==(const Operand &other) const {
+  // Check for matching operand kind
+  if (m_kind != other.m_kind)
+    return false;
+
+  if (is_imm_ival())
+    return m_imm_ival == other.m_imm_ival;
+
+  if (is_label() || is_imm_label())
+    return m_label == other.m_label;
+
+  if (has_base_reg()) 
+    return m_basereg == other.m_basereg;
+
+  // Should be unreachable
+  assert(false);
+}
+
+std::size_t Operand::hash() const {
+  return ((std::hash<int>()(m_kind)
+           ^ (std::hash<int>()(m_basereg) << 1)) >> 1)
+           ^ (std::hash<long>()(m_imm_ival) << 1);
+}
+
 Operand::Kind Operand::get_kind() const {
   return m_kind;
 }
