@@ -51,7 +51,7 @@ class LocalValueNumbering : public ControlFlowGraphTransform {
       size_t operator()(const LVN_key &k) const {
         return ((k.left.hash()
                   ^ (k.right.hash() << 1)) >> 1)
-                  ^ (std::hash<int>(k.op) << 1); 
+                  ^ (std::hash<int>((int) k.op) << 1); 
       }
     };
 
