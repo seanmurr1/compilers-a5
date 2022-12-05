@@ -41,6 +41,8 @@ class LocalValueNumbering : public ControlFlowGraphTransform {
       Operand right;
       LVN_op op;
 
+      LVN_key(Operand l, Operand r, LVN_op o) : left(l), right(r), op(o) { }
+
       bool operator==(const LVN_key &other) const {
         return (left == other.left && right == other.right && op == other.op);
       }
