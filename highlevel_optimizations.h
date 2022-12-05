@@ -18,6 +18,9 @@ class DeadStoreElimination : public ControlFlowGraphTransform {
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
 };
 
+/**
+ * Simplify representation of some binary operators.
+ **/
 enum Operator {
   ADD,
   SUB,
@@ -32,6 +35,10 @@ enum Operator {
   NEQ,
 };
 
+/**
+ * Implement local-value-numbering (LVN), replacing redundant computations with 
+ * copies of previously computed values.
+ **/
 class LocalValueNumbering : public ControlFlowGraphTransform {
   private:
     class LVN_key {

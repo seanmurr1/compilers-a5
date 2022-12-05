@@ -45,7 +45,9 @@ LocalValueNumbering::LocalValueNumbering(const std::shared_ptr<ControlFlowGraph>
 
 LocalValueNumbering::~LocalValueNumbering() { }
 
-////////////
+/**
+ * Check for matching HL opcode.
+ **/ 
 bool match_hl(int base, int hl_opcode) {
   return hl_opcode >= base && hl_opcode < (base + 4);
 }
@@ -116,6 +118,9 @@ Operator get_operator(HighLevelOpcode opcode) {
 
 }
 
+/**
+ * Applies constant folding to a binary expression involving two constants.
+ **/
 void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> result_iseq, Instruction *orig_ins) {
   HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
   Operand dest = orig_ins->get_operand(0);
@@ -167,6 +172,11 @@ void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> res
   result_iseq->append(new Instruction(mov_opcode, dest, Operand(Operand::IMM_IVAL, result)));
 }
 
+/**
+ * Checks if a instruction utilizes an algebraic identity.
+ * If so, simplify instruction and return true.
+ * Return false otherwise.
+ **/
 bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<InstructionSequence> result_iseq, Instruction *orig_ins) {
   HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
   Operand dest = orig_ins->get_operand(0);
@@ -216,12 +226,14 @@ bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<Instruction
     }
   }
 
+  // Case: no identity
   return false;
 }
 
-
+/**
+ * Apply LVN to a single block.
+ **/
 std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(const InstructionSequence *orig_bb) {
-  // TODO
   // Clear map first
   lvn_map.clear();
 
@@ -239,19 +251,18 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
       Operand left = orig_ins->get_operand(1);
       Operand right = orig_ins->get_operand(2);
 
+      // Constant folding
       if (left.is_imm_ival() && right.is_imm_ival()) {
-        // Constant folding 
         constant_fold(result_iseq, orig_ins);
         continue;
       }
-
       // Algebraic identities
       if (check_algebraic_identities(result_iseq, orig_ins))
         continue;      
 
       // TODO commutativity?
 
-      // LVN part
+      // Local Value Numbering
       HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
       Operator op = get_operator(opcode);
       // Create hash key
@@ -270,7 +281,6 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
       // Update map
       lvn_map[key] = dest;
     }
-
   }
   return result_iseq;
 }
