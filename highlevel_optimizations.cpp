@@ -51,7 +51,7 @@ bool match_hl(int base, int hl_opcode) {
 }
 
 void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> result_iseq, Instruction *orig_ins) {
-  HighLevelOpcode opcode = orig_ins->get_opcode();
+  HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
   Operand dest = orig_ins->get_operand(0);
   int left = orig_ins->get_operand(1).get_imm_ival();
   int right = orig_ins->get_operand(2).get_imm_ival();
@@ -94,7 +94,7 @@ void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> res
   } else 
     assert(false);
 
-  HighLevelOpcode mov_opcode = HINS_mov_b + mov_shift;
+  HighLevelOpcode mov_opcode = (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
 
   result_iseq->append(new Instruction(mov_opcode, dest, Operand(Operand::IMM_IVAL, result)));
 }
@@ -145,6 +145,8 @@ ConstantPropagation::~ConstantPropagation() { }
 
 std::shared_ptr<InstructionSequence> ConstantPropagation::transform_basic_block(const InstructionSequence *orig_bb) {
   // TODO
+
+  return NULL;
 }
 
 /*************** COPY PROPAGATION ****************/
@@ -156,4 +158,6 @@ CopyPropagation::~CopyPropagation() { }
 
 std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(const InstructionSequence *orig_bb) {
   // TODO
+
+  return NULL;
 }
