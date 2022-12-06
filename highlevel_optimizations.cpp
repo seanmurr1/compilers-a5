@@ -324,7 +324,7 @@ std::shared_ptr<InstructionSequence> ConstantPropagation::transform_basic_block(
 
     // Check for def
     if (HighLevel::is_def(orig_ins)) {
-      HighLevelOpcode opcode = orig_ins->get_opcode();
+      HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
       unsigned num_operands = orig_ins->get_num_operands();
       Operand dest = orig_ins->get_operand(0);
 
@@ -386,7 +386,7 @@ std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(cons
 
     // Check for def
     if (HighLevel::is_def(orig_ins)) {
-      HighLevelOpcode opcode = orig_ins->get_opcode();
+      HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
       unsigned num_operands = orig_ins->get_num_operands();
       Operand dest = orig_ins->get_operand(0);
 
