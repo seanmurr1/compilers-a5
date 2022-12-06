@@ -55,12 +55,12 @@ class LocalValueNumbering : public ControlFlowGraphTransform {
     };
 
     class LVN_hasher {
-    public:
-      size_t operator()(const LVN_key &k) const {
-        return ((k.left.hash()
+      public:
+        size_t operator()(const LVN_key &k) const {
+          return ((k.left.hash()
                   ^ (k.right.hash() << 1)) >> 1)
                   ^ (std::hash<int>()((int) k.op) << 1); 
-      }
+        }
     };
 
     std::unordered_map<LVN_key, Operand, LVN_hasher> lvn_map;
@@ -75,9 +75,18 @@ class LocalValueNumbering : public ControlFlowGraphTransform {
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
 };
 
+// Used to hash on Operand objects
+class OperandHasher {
+  public:
+    size_t operator()(const Operand &o) const {
+      return o.hash(); 
+    }
+};
+
 class ConstantPropagation : public ControlFlowGraphTransform {
   private:
-    // TODO
+    // Map VREG to constant value
+    std::unordered_map<Operand, Operand, OperandHasher> constants_map;
 
   public:
     ConstantPropagation(const std::shared_ptr<ControlFlowGraph> &cfg);
@@ -88,7 +97,8 @@ class ConstantPropagation : public ControlFlowGraphTransform {
 
 class CopyPropagation : public ControlFlowGraphTransform {
   private:
-    // TODO
+    // Map VREG to VREG to copy
+    std::unordered_map<Operand, Operand, OperandHasher> copy_map;
 
   public:
     CopyPropagation(const std::shared_ptr<ControlFlowGraph> &cfg);

@@ -202,6 +202,11 @@ bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<Instruction
       result_iseq->append(new Instruction(mov_opcode, dest, left));
       return true;
     } 
+    // Identity: x - x = 0
+    else if (left == right) {
+      result_iseq->append(new Instruction(mov_opcode, dest, Operand(Operand::IMM_IVAL, 0)));
+      return true;
+    }
     // TODO: 0 - R => but we would need to emit negate instruction...?
   } else if (op == Operator::MUL) {
     // Identity: multiply by one
@@ -216,6 +221,11 @@ bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<Instruction
     // Identity: divide by one
     if (right.has_imm_ival() && right.get_imm_ival() == 1) {
       result_iseq->append(new Instruction(mov_opcode, dest, left));
+      return true;
+    }
+    // Identity: x / x = 1
+    else if (left == right) {
+      result_iseq->append(new Instruction(mov_opcode, dest, Operand(Operand::IMM_IVAL, 1)));
       return true;
     }
   } else if (op == Operator::MOD) {
@@ -245,7 +255,10 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
     if (HighLevel::is_def(orig_ins)) {
       // For now assume num_operands = 2 (maybe deal with unary expressions later)
       unsigned num_operands = orig_ins->get_num_operands();
-      if (num_operands != 2) continue;
+      if (num_operands != 2) {
+        result_iseq->append(orig_ins->duplicate());
+        continue;
+      }
 
       Operand dest = orig_ins->get_operand(0);
       Operand left = orig_ins->get_operand(1);
@@ -280,6 +293,8 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
       }
       // Update map
       lvn_map[key] = dest;
+    } else {
+      result_iseq->append(orig_ins->duplicate());
     }
   }
   return result_iseq;
@@ -293,9 +308,58 @@ ConstantPropagation::ConstantPropagation(const std::shared_ptr<ControlFlowGraph>
 ConstantPropagation::~ConstantPropagation() { }
 
 std::shared_ptr<InstructionSequence> ConstantPropagation::transform_basic_block(const InstructionSequence *orig_bb) {
-  // TODO
+  // Clear map first
+  constants_map.clear();
 
-  return NULL;
+  std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
+
+  for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
+    Instruction *orig_ins = *i;
+
+    // Do not check call, return, etc. instructions (those with less than 2 operands)
+    if (orig_ins->get_num_operands() < 2) {
+      result_iseq->append(orig_ins->duplicate());
+      continue;
+    }
+
+    // Check for def
+    if (HighLevel::is_def(orig_ins)) {
+      HighLevelOpcode opcode = orig_ins->get_opcode();
+      unsigned num_operands = orig_ins->get_num_operands();
+      Operand dest = orig_ins->get_operand(0);
+
+      if (match_hl(HINS_mov_b, opcode)) {
+        if (orig_ins->get_operand(1).is_imm_ival()) {
+          // Dest now tracks a constant: add to map
+          constants_map[dest] = orig_ins->get_operand(1);
+        } else {
+          // Dest no longer tracks a constant: remove from map
+          constants_map.erase(dest);
+        }
+        // Duplicate instruction
+        result_iseq->append(orig_ins->duplicate());
+        continue;
+      }
+
+      if (num_operands == 2) {
+        Operand new_src = orig_ins->get_operand(1);
+        // Check if we have a stored constant for operand
+        new_src = constants_map.count(new_src) == 1 ? constants_map[new_src] : new_src;
+        result_iseq->append(new Instruction(opcode, dest, new_src));
+      } else if (num_operands == 3) {
+        Operand new_left = orig_ins->get_operand(1);
+        Operand new_right = orig_ins->get_operand(1);
+        // Check if we have a stored constant for operands
+        new_left = constants_map.count(new_left) == 1 ? constants_map[new_left] : new_left;
+        new_right = constants_map.count(new_right) == 1 ? constants_map[new_right] : new_right;
+        result_iseq->append(new Instruction(opcode, dest, new_left, new_right));
+      }
+    } else {
+      result_iseq->append(orig_ins->duplicate());
+      continue;
+    }
+  }
+  return result_iseq;
 }
 
 /*************** COPY PROPAGATION ****************/
@@ -306,7 +370,56 @@ CopyPropagation::CopyPropagation(const std::shared_ptr<ControlFlowGraph> &cfg)
 CopyPropagation::~CopyPropagation() { }
 
 std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(const InstructionSequence *orig_bb) {
-  // TODO
+  // Clear map first
+  copy_map.clear();
 
-  return NULL;
+  std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
+
+  for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
+    Instruction *orig_ins = *i;
+
+    // Do not check call, return, etc. instructions (those with less than 2 operands)
+    if (orig_ins->get_num_operands() < 2) {
+      result_iseq->append(orig_ins->duplicate());
+      continue;
+    }
+
+    // Check for def
+    if (HighLevel::is_def(orig_ins)) {
+      HighLevelOpcode opcode = orig_ins->get_opcode();
+      unsigned num_operands = orig_ins->get_num_operands();
+      Operand dest = orig_ins->get_operand(0);
+
+      if (match_hl(HINS_mov_b, opcode)) {
+        if (orig_ins->get_operand(1).is_imm_ival()) {
+          // Dest no longer tracks a vreg to copy: remove from map
+          copy_map.erase(dest);
+        } else {
+          // Dest tracks vreg to copy into: add to map
+          copy_map[dest] = orig_ins->get_operand(1);
+        }
+        // Duplicate instruction
+        result_iseq->append(orig_ins->duplicate());
+        continue;
+      }
+
+      if (num_operands == 2) {
+        Operand new_src = orig_ins->get_operand(1);
+        // Check if we have a stored constant for operand
+        new_src = copy_map.count(new_src) == 1 ? copy_map[new_src] : new_src;
+        result_iseq->append(new Instruction(opcode, dest, new_src));
+      } else if (num_operands == 3) {
+        Operand new_left = orig_ins->get_operand(1);
+        Operand new_right = orig_ins->get_operand(1);
+        // Check if we have a stored constant for operands
+        new_left = copy_map.count(new_left) == 1 ? copy_map[new_left] : new_left;
+        new_right = copy_map.count(new_right) == 1 ? copy_map[new_right] : new_right;
+        result_iseq->append(new Instruction(opcode, dest, new_left, new_right));
+      }
+    } else {
+      result_iseq->append(orig_ins->duplicate());
+      continue;
+    }
+  }
+  return result_iseq;
 }
