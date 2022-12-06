@@ -10,6 +10,7 @@
 #include "lowlevel_codegen.h"
 
 #include "cfg.h"
+#include "highlevel_optimizations"
 
 namespace {
 
@@ -104,13 +105,21 @@ std::shared_ptr<InstructionSequence> LowLevelCodeGen::generate(const std::shared
 
     // Do local optimizations
     // TODO
-    /**
-      LocalOptimizationHighLevel hl_opts(cfg);
-      cfg = hl_opts.transform_cfg();
-      The LocalOptimizationHighLevel class mentioned above would 
-      be a subclass of ControlFlowGraphTransform, which would 
-      implement local optimizations on each basic block in the high-level code.
-     **/
+    int num_iterations = 2;
+    for (int i = 0; i < num_iterations; i++) {
+      // Constant propagation
+      ConstantPropagation constant_prop(cfg);
+      cfg = constant_prop.transform_cfg();
+      // LVN
+      LocalValueNumbering lvn(cfg);
+      cfg = lvn.transform_cfg();
+      // Copy propagation
+      CopyPropagation copy_prop(cfg);
+      cfg = copy_prop.tranform_cfg();
+      // Dead store elimination
+      DeadStoreElimination dead_elim(cfg);
+      cfg = dead_elim.transform_cfg();
+    }
 
     // Convert transformed high-level CFG back into iseq
     cur_hl_iseq = cfg->create_instruction_sequence();
