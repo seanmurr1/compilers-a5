@@ -253,12 +253,9 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
     Instruction *orig_ins = *i;
 
     if (HighLevel::is_def(orig_ins)) {
-      // For now assume num_operands = 2 (maybe deal with unary expressions later)
+      // For now assume num_operands = 3 (maybe deal with unary expressions later)
       unsigned num_operands = orig_ins->get_num_operands();
- 
-      printf("Num operands: %u\n", num_operands);
-
-      if (num_operands < 2) {
+      if (num_operands < 3) {
         result_iseq->append(orig_ins->duplicate());
         continue;
       }
