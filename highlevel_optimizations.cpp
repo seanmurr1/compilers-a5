@@ -255,7 +255,7 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
     if (HighLevel::is_def(orig_ins)) {
       // For now assume num_operands = 2 (maybe deal with unary expressions later)
       unsigned num_operands = orig_ins->get_num_operands();
-      if (num_operands != 2) {
+      if (num_operands < 2) {
         result_iseq->append(orig_ins->duplicate());
         continue;
       }
