@@ -115,7 +115,7 @@ std::shared_ptr<InstructionSequence> LowLevelCodeGen::generate(const std::shared
       cfg = lvn.transform_cfg();
       // Copy propagation
       CopyPropagation copy_prop(cfg);
-      cfg = copy_prop.tranform_cfg();
+      cfg = copy_prop.transform_cfg();
       // Dead store elimination
       DeadStoreElimination dead_elim(cfg);
       cfg = dead_elim.transform_cfg();
