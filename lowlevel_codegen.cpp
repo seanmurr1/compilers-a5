@@ -10,7 +10,7 @@
 #include "lowlevel_codegen.h"
 
 #include "cfg.h"
-#include "highlevel_optimizations"
+#include "highlevel_optimizations.h"
 
 namespace {
 
