@@ -362,7 +362,10 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
   Operand dest = orig_ins->get_operand(0);
   int reg = dest.get_base_reg();
 
-  if (match_hl(HINS_mov_b, opcode)) {
+  if (match_hl(HINS_localaddr, opcode)) {
+    constants_map.erase(reg);
+    result_iseq->append(orig_ins->duplicate());
+  } else if (match_hl(HINS_mov_b, opcode)) {
     if (orig_ins->get_operand(1).is_imm_ival()) 
       // Dest now tracks a constant: add to map
       constants_map[reg] = orig_ins->get_operand(1).get_imm_ival();
@@ -454,8 +457,11 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
   unsigned num_operands = orig_ins->get_num_operands();
   Operand dest = orig_ins->get_operand(0);
   int reg = dest.get_base_reg();
-
-  if (match_hl(HINS_mov_b, opcode)) {
+  
+  if (match_hl(HINS_localaddr, opcode)) {
+    copy_map.erase(reg);
+    result_iseq->append(orig_ins->duplicate());
+  } else if (match_hl(HINS_mov_b, opcode)) {
     if (orig_ins->get_operand(1).is_imm_ival()) 
       // Dest no longer tracks a vreg to copy: remove from map
       copy_map.erase(reg);
