@@ -96,16 +96,20 @@ class OperandHasher {
     }
 };
 
+/**
+ * Constant propagation optimization.
+ **/
 class ConstantPropagation : public ControlFlowGraphTransform {
   private:
-    // Map VREG to constant value
-    std::unordered_map<Operand, Operand, OperandHasher> constants_map;
+    // Map VREG # to constant value
+    std::unordered_map<int, int> constants_map;
 
   public:
     ConstantPropagation(const std::shared_ptr<ControlFlowGraph> &cfg);
     ~ConstantPropagation();
 
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
+    void process_definition(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq);
 };
 
 class CopyPropagation : public ControlFlowGraphTransform {

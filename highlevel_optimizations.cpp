@@ -353,6 +353,47 @@ ConstantPropagation::ConstantPropagation(const std::shared_ptr<ControlFlowGraph>
 
 ConstantPropagation::~ConstantPropagation() { }
 
+/**
+ * Process a defining instruction and perform constant propagation if necessary.
+ **/
+void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq) {
+  HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
+  unsigned num_operands = orig_ins->get_num_operands();
+  Operand dest = orig_ins->get_operand(0);
+  int reg = dest.get_base_reg();
+
+  if (match_hl(HINS_mov_b, opcode)) {
+    if (orig_ins->get_operand(1).is_imm_ival()) 
+      // Dest now tracks a constant: add to map
+      constants_map[reg] = orig_ins->get_operand(1).get_imm_ival();
+    else 
+      // Dest no longer tracks a constant: remove from map
+      constants_map.erase(reg);
+    // Duplicate instruction
+    result_iseq->append(orig_ins->duplicate());
+  } else if (num_operands == 2) {
+    Operand right = orig_ins->get_operand(1);
+    if (right.has_base_reg() && constants_map.count(right.get_base_reg()) == 1) 
+      // We have a constant stored
+      right = Operand(Operand::IMM_IVAL, constants_map[right.get_base_reg()]);
+    result_iseq->append(new Instruction(opcode, dest, right));
+  } else if (num_operands == 3) {
+    Operand left = orig_ins->get_operand(1);
+    Operand right = orig_ins->get_operand(2);
+    // Check if we have a stored constant for operands
+    if (right.has_base_reg() && constants_map.count(right.get_base_reg()) == 1) 
+      // We have a constant stored
+      right = Operand(Operand::IMM_IVAL, constants_map[right.get_base_reg()]);
+    if (left.has_base_reg() && constants_map.count(left.get_base_reg()) == 1) 
+      // We have a constant stored
+      left = Operand(Operand::IMM_IVAL, constants_map[left.get_base_reg()]);
+    result_iseq->append(new Instruction(opcode, dest, left, right));
+  }
+}
+
+/**
+ * Perform constant propagation on a single block.
+ **/
 std::shared_ptr<InstructionSequence> ConstantPropagation::transform_basic_block(const InstructionSequence *orig_bb) {
   // Clear map first
   constants_map.clear();
@@ -363,47 +404,12 @@ std::shared_ptr<InstructionSequence> ConstantPropagation::transform_basic_block(
     Instruction *orig_ins = *i;
 
     // Do not check call, return, etc. instructions (those with less than 2 operands)
-    if (orig_ins->get_num_operands() < 2) {
+    if (orig_ins->get_num_operands() < 2) 
       result_iseq->append(orig_ins->duplicate());
-      continue;
-    }
-
-    // Check for def
-    if (HighLevel::is_def(orig_ins)) {
-      HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
-      unsigned num_operands = orig_ins->get_num_operands();
-      Operand dest = orig_ins->get_operand(0);
-
-      if (match_hl(HINS_mov_b, opcode)) {
-        if (orig_ins->get_operand(1).is_imm_ival()) {
-          // Dest now tracks a constant: add to map
-          constants_map[dest] = orig_ins->get_operand(1);
-        } else {
-          // Dest no longer tracks a constant: remove from map
-          constants_map.erase(dest);
-        }
-        // Duplicate instruction
-        result_iseq->append(orig_ins->duplicate());
-        continue;
-      }
-
-      if (num_operands == 2) {
-        Operand new_src = orig_ins->get_operand(1);
-        // Check if we have a stored constant for operand
-        new_src = constants_map.count(new_src) == 1 ? constants_map[new_src] : new_src;
-        result_iseq->append(new Instruction(opcode, dest, new_src));
-      } else if (num_operands == 3) {
-        Operand new_left = orig_ins->get_operand(1);
-        Operand new_right = orig_ins->get_operand(1);
-        // Check if we have a stored constant for operands
-        new_left = constants_map.count(new_left) == 1 ? constants_map[new_left] : new_left;
-        new_right = constants_map.count(new_right) == 1 ? constants_map[new_right] : new_right;
-        result_iseq->append(new Instruction(opcode, dest, new_left, new_right));
-      }
-    } else {
+    else if (HighLevel::is_def(orig_ins)) 
+      process_definition(orig_ins, result_iseq);
+    else 
       result_iseq->append(orig_ins->duplicate());
-      continue;
-    }
   }
   return result_iseq;
 }
