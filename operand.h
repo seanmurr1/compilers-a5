@@ -41,6 +41,8 @@ private:
   long m_imm_ival;
   std::string m_label;
 
+  int m_mreg;
+
 public:
   Operand(Kind kind = NONE);
 
@@ -59,6 +61,9 @@ public:
 
   bool operator==(const Operand &other) const;
   std::size_t hash() const;
+
+  void assign_mreg(int mreg) { m_mreg = mreg; }
+  int get_mreg() const { return m_mreg; }
 
   Kind get_kind() const;
 

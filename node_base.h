@@ -45,6 +45,8 @@ private:
 
   int m_max_temp_vreg;
 
+  std::vector<MachineReg> assigned_mregs;
+
   // copy ctor and assignment operator not supported
   NodeBase(const NodeBase &);
   NodeBase &operator=(const NodeBase &);
@@ -69,6 +71,7 @@ public:
   void set_fn_type(const std::shared_ptr<Type> &type) { m_fn_type = type; }
   std::shared_ptr<Type> get_fn_type() const { return m_fn_type; }
 
+  std::vector<MachineReg> &get_assigned_mregs() { return assigned_mregs; }
 };
 
 #endif // NODE_BASE_H

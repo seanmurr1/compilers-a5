@@ -1,5 +1,6 @@
 #include "highlevel_optimizations.h"
 #include "highlevel.h"
+#include "node.h"
 
 
 /*************** DEAD STORE ELIMINATION ****************/
@@ -121,7 +122,7 @@ Operator get_operator(HighLevelOpcode opcode) {
 /**
  * Applies constant folding to a binary expression involving two constants.
  **/
-void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> result_iseq, Instruction *orig_ins) {
+void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> &result_iseq, Instruction *orig_ins) {
   HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
   Operand dest = orig_ins->get_operand(0);
   int left = orig_ins->get_operand(1).get_imm_ival();
@@ -177,7 +178,7 @@ void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> res
  * If so, simplify instruction and return true.
  * Return false otherwise.
  **/
-bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<InstructionSequence> result_iseq, Instruction *orig_ins) {
+bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<InstructionSequence> &result_iseq, Instruction *orig_ins) {
   HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
   Operand dest = orig_ins->get_operand(0);
   Operand left = orig_ins->get_operand(1);
@@ -362,6 +363,31 @@ std::shared_ptr<InstructionSequence> ConstantPropagation::transform_basic_block(
   return result_iseq;
 }
 
+/**
+ * Adds a new instruction to result instruction sequence,
+ * where the number of passed operands is variable.
+ **/
+void add_variable_length_ins(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq, std::vector<Operand> &new_ops) {
+  HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
+  int num_operands = orig_ins->get_num_operands();
+  switch (num_operands) {
+    case 0:
+      result_iseq->append(new Instruction(opcode));
+      break;
+    case 1: 
+      result_iseq->append(new Instruction(opcode, new_ops[0]));
+      break;
+    case 2:
+      result_iseq->append(new Instruction(opcode, new_ops[0], new_ops[1]));
+      break;
+    case 3:
+      result_iseq->append(new Instruction(opcode, new_ops[0], new_ops[1], new_ops[2]));
+      break;
+    default:
+      break;
+  }
+}
+
 /*************** COPY PROPAGATION ****************/
 CopyPropagation::CopyPropagation(const std::shared_ptr<ControlFlowGraph> &cfg)
   : ControlFlowGraphTransform(cfg)
@@ -421,5 +447,214 @@ std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(cons
       continue;
     }
   }
+  return result_iseq;
+}
+
+/*************** LOCAL REGISTER ALLOCATION ****************/
+LocalRegisterAllocation::LocalRegisterAllocation(const std::shared_ptr<ControlFlowGraph> &cfg)
+  : ControlFlowGraphTransform(cfg)
+  , m_live_vregs(cfg) {
+    m_live_vregs.execute();
+}
+
+LocalRegisterAllocation::~LocalRegisterAllocation() { }
+
+std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_block(const InstructionSequence *orig_bb) {
+  // Reset data
+  do_not_map.clear();
+  local_reg_map.clear();
+
+  std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
+
+  // LiveVregs needs a pointer to a BasicBlock object to get a dataflow fact for that basic block
+  const BasicBlock *orig_bb_as_basic_block = static_cast<const BasicBlock *>(orig_bb);
+  LiveVregs::FactType live_after = m_live_vregs.get_fact_at_end_of_block(orig_bb_as_basic_block);
+
+  // Determine which argument/caller-saved registers are used in this block
+  // and which VREG #s not to map
+  int last_arg_reg_used = 0;
+  for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
+    Instruction *orig_ins = *i;
+    int num_operands = orig_ins->get_num_operands();
+    for (int i = 0; i < num_operands; i++) {
+      Operand op = orig_ins->get_operand(i);
+      if (!op.has_base_reg()) continue;
+
+      int reg = op.get_base_reg();
+      if (live_after.test(reg)) do_not_map.insert(op);
+      if (reg >= 1 && reg <= 6) {
+        do_not_map.insert(op);
+        last_arg_reg_used++;
+      }
+    }    
+  }
+
+  // VREG # of first local reg to allocate
+  int starting_local_reg = last_arg_reg_used + 1;
+  int num_local_regs = 7 - starting_local_reg;
+  int cur_local_reg_idx = 0;
+  reverse_map = std::vector<int>(num_local_regs);
+  for (int i = 0; i < num_local_regs; i++)
+    reverse_map[i] = NULL;
+
+  for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
+    Instruction *orig_ins = *i;
+    int num_operands = orig_ins->get_num_operands();
+    std::vector<Operand> new_ops(num_operands);
+
+    // Operands mapped in this given instruction
+    int ops_mapped = 0;
+    currently_mapped.clear();
+
+    for (int i = 0; i < num_operands; i++) {
+      Operand op = orig_ins->get_operand(i);
+      if (!op.has_base_reg() || ops_mapped >= num_local_regs) {
+        new_ops[i] = op;
+        continue;
+      }
+
+      if (do_not_map.count(op) == 1) 
+        new_ops[i] = op;
+      else if (local_reg_map.count(op) == 1) {
+        new_ops[i] = local_reg_map[op];
+        currently_mapped.insert(op);
+        ops_mapped++;
+      } else {
+        allocate_register(result_iseq, op, i == 0);
+        new_ops[i] = local_reg_map[op];
+        currently_mapped.insert(op);
+        ops_mapped++;
+      }
+    }  
+    add_variable_length_ins(orig_ins, result_iseq, new_ops);
+  }
+
+  return result_iseq;
+}
+
+void LocalRegisterAllocation::allocate_register(std::shared_ptr<InstructionSequence> &result_iseq, Operand op, bool def) {
+  Operand to_spill = reverse_map[cur_local_reg_idx];
+  while (to_spill != NULL || currently_mapped.count(to_spill) == 1) {
+    cur_local_reg_idx = (cur_local_reg_idx + 1) % num_local_regs;
+    to_spill = reverse_map[cur_local_reg_idx];
+  }
+  
+  Operand local_reg(Operand::VREG, cur_local_reg_idx + start_local_reg);
+
+  if (to_spill != NULL) {
+    // TODO: check right suffix of HINS_mov_? should be fine with how promotions work though
+    // Spill register
+    result_iseq->append(new Instruction(HINS_mov_q, to_spill, local_reg));
+    // Invalidate data
+    reverse_map.erase(to_spill);
+  }
+  if (!def)
+    result_iseq->append(new Instruction(HINS_mov_q, local_reg, op));
+
+  local_reg_map[op] = local_reg;
+  reverse_map[cur_local_reg_idx] = op;
+
+  cur_local_reg_idx = (cur_local_reg_idx + 1) % num_local_regs;
+}
+
+/**
+ * Also need to check for that non-zero field in local register alloc
+ **/
+
+/*************** GLOBAL CALLEE SAVED REGISTER ASSIGNMENT ****************/
+GlobalCalleeSavedRegAssignment::GlobalCalleeSavedRegAssignment() { }
+
+GlobalCalleeSavedRegAssignment::~GlobalCalleeSavedRegAssignment() { }
+
+/**
+ * Get ref counts of all VREGs that track local variables.
+ * Update internal map.
+ **/ 
+void GlobalCalleeSavedRegAssignment::update_ref_counts(std::shared_ptr<InstructionSequence> &orig_iseq, int last_local_var_reg) {
+  for (auto i = orig_iseq->cbegin(); i != orig_iseq->cend(); i++) {
+    Instruction *orig_ins = *i;
+    for (int i = 0; i < orig_ins->get_num_operands(); i++) {
+      Operand op = orig_ins->get_operand(i);
+      if (!op.has_base_reg()) continue;
+      int reg = op.get_base_reg();
+      if (reg < 10 || reg > last_local_var_reg) continue;
+
+      ref_counts[reg - 10].second++;
+    }
+  }
+}
+
+// Compare two VREG's ref counts for sorting in decreasing order.
+bool cmp_ref_count(std::pair<int, int> &a, std::pair<int, int> &b) {
+  return a.second > b.second;
+}
+
+/**
+ * Assigns callee-saved mregs to local vars with highest ref counts.
+ **/
+void GlobalCalleeSavedRegAssignment::assign_mregs(std::vector<MachineReg> &assigned_mregs) {
+  mapped_mregs.clear();
+  assigned_mregs.clear();
+  for (int i = 0; i < num_local_vars; i++) {
+    // Stop when we have used all available callee-saved mregs
+    if (i >= machine_registers.size()) break;
+
+    MachineReg mreg = mregs[i];
+    std::string &mreg_name = mreg_names[i];
+    std::pair<int, int> &op_ref_count = ref_counts[i];
+    mapped_mregs[op_ref_count.first] = mreg;
+    assigned_mregs.push_back(mreg);
+
+    printf("/* allocate machine register %s to vreg %d, with rank %d */\n", mreg_name.c_str(), op_ref_count.first, op_ref_count.second);
+  }
+}
+
+/**
+ * Duplicate iseq, but tag operands that have been assigned 
+ * a machine register.
+ **/
+void GlobalCalleeSavedRegAssignment::tag_operands(std::shared_ptr<InstructionSequence> &orig_iseq, std::shared_ptr<InstructionSequence> &result_iseq) {
+  for (auto i = orig_iseq->cbegin(); i != orig_iseq->cend(); i++) {
+    Instruction *orig_ins = *i;
+    int num_operands = orig_ins->get_num_operands();
+
+    std::vector<Operand> new_ops(num_operands);
+    for (int i = 0; i < num_operands; i++) {
+      new_ops[i] = orig_ins->get_operand(i);
+      if (!op.has_base_reg()) 
+        continue;
+
+      int reg = op.get_base_reg();
+      if (mapped_mregs.count(reg) == 1)
+        new_ops[i].assign_mreg(mapped_mregs[reg]);
+    }
+    add_variable_length_ins(orig_ins, result_iseq, new_ops);
+  }
+}
+
+/**
+ * Perform global callee saved register assignment.
+ **/
+std::shared_ptr<InstructionSequence> GlobalCalleeSavedRegAssignment::optimize(std::shared_ptr<InstructionSequence> &orig_iseq) {
+  std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
+  Node *funcdef_ast = orig_iseq->get_funcdef_ast();
+  std::shared_ptr<Symbol> funcdef_sym = funcdef_ast->get_symbol();
+
+  int last_local_var_reg = funcdef_sym->get_vreg() - 1;
+  int num_local_vars = last_local_var_reg - 9;
+  
+  ref_counts = std::vector<std::pair<int, int>>(num_local_vars);
+  for (int i = 0; i < num_local_vars; i++) 
+    ref_counts[i] = std::make_pair(10 + i, 0);
+  
+  // Get ref counts for each local var
+  update_ref_counts(orig_iseq, last_local_var_reg);
+  // Sort in decreasing order by ref counts
+  std::sort(ref_counts.begin(), ref_counts.end(), cmp_ref_count);
+  // Assign as many mregs as possible
+  assign_mregs(funcdef_ast->get_assigned_mregs());
+  // Iterate through instructions and tag operands with assigned mregs
+  tag_operands(orig_iseq, result_iseq);
+
   return result_iseq;
 }

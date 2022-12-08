@@ -277,12 +277,33 @@ void LowLevelCodeGen::translate_instruction(Instruction *hl_ins, const std::shar
     ll_iseq->append(new Instruction(MINS_MOVQ, Operand(Operand::MREG64, MREG_RSP), Operand(Operand::MREG64, MREG_RBP)));
     ll_iseq->append(new Instruction(MINS_SUBQ, Operand(Operand::IMM_IVAL, m_total_memory_storage), Operand(Operand::MREG64, MREG_RSP)));
 
+    // Push assigned callee-saved regs and align stack if needed
+    std::vector<MachineReg> &assigned_mregs = ll_iseq->get_funcdef_ast()->get_assigned_mregs();
+    for (auto i = assigned_mregs.crbegin(); i != assigned_mregs.crend(); i++) {
+      MachineReg mreg = *i;
+      ll_iseq->append(new Instruction(MINS_PUSHQ, Operand(Operand::MREG64, mreg)));
+    }
+    // Make sure offset is multiple of 16
+    if (assigned_mregs.size() % 2 == 1)
+      ll_iseq->append(new Instruction(MINS_SUBQ, Operand(Operand::IMM_IVAL, 8), Operand(Operand::MREG64, MREG_RSP)));
+
     return;
   }
 
   if (hl_opcode == HINS_leave) {
     // Function epilogue: deallocate local storage area and restore original value
     // of %rbp
+
+    // Pop assigned callee-saved regs and realign stack if needed
+    std::vector<MachineReg> &assigned_mregs = ll_iseq->get_funcdef_ast()->get_assigned_mregs();
+    // Make sure offset is multiple of 16
+    if (assigned_mregs.size() % 2 == 1)
+      ll_iseq->append(new Instruction(MINS_ADDQ, Operand(Operand::IMM_IVAL, 8), Operand(Operand::MREG64, MREG_RSP)));
+    for (auto i = assigned_mregs.cbegin(); i != assigned_mregs.cend(); i++) {
+      MachineReg mreg = *i;
+      ll_iseq->append(new Instruction(MINS_POPQ, Operand(Operand::MREG64, mreg)));
+    }
+
     ll_iseq->append(new Instruction(MINS_ADDQ, Operand(Operand::IMM_IVAL, m_total_memory_storage), Operand(Operand::MREG64, MREG_RSP)));
     ll_iseq->append(new Instruction(MINS_POPQ, Operand(Operand::MREG64, MREG_RBP)));
 
@@ -451,6 +472,15 @@ Operand LowLevelCodeGen::get_ll_operand(Operand op, int size, const std::shared_
         // Unreachable
         assert(false);
     }
+  }
+
+  if (op.get_mreg() >= 0) {
+    // Op has an assigned callee-saved register
+    Operand::Kind mreg_kind = select_mreg_kind(size);
+    if (op.is_memref())
+      mreg_kind = Operand::MREG64_MEM;
+
+    return Operand(mreg_kind, op.get_mreg());
   }
 
   // Case: non-reserved virtual register

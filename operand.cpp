@@ -64,7 +64,8 @@ Operand::Operand(Kind kind)
   : m_kind(kind)
   , m_basereg(-1)
   , m_index_reg(-1)
-  , m_imm_ival(-1) {
+  , m_imm_ival(-1)
+  , m_mreg(-1) {
 }
 
 // ival1 is either basereg or imm_ival (depending on operand Kind)
@@ -85,7 +86,8 @@ Operand::Operand(Kind kind, int basereg, long ival2)
   : m_kind(kind)
   , m_basereg(basereg)
   , m_index_reg(-1)
-  , m_imm_ival(-1) {
+  , m_imm_ival(-1)
+  , m_mreg(-1) {
   const OperandProperties &props = oprops(kind);
   if (props.has_index_reg()) {
     m_index_reg = int(ival2);
