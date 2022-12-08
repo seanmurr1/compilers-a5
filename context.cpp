@@ -36,6 +36,9 @@
 #include "lowlevel_codegen.h"
 #include "context.h"
 
+// TODO
+#include "highlevel_optimizations.h"
+
 Context::Context()
   : m_ast(nullptr),
   m_next_str_identifier(0) {
@@ -180,6 +183,11 @@ void Context::highlevel_codegen(ModuleCollector *module_collector) {
       hl_codegen.visit(child);
       std::string fn_name = child->get_kid(1)->get_str();
       std::shared_ptr<InstructionSequence> hl_iseq = hl_codegen.get_hl_iseq();
+
+      // TODO
+      HighLevelOptimizer hl_optimizer;
+      hl_iseq = hl_optimizer.optimize(hl_iseq);
+      //////////////////////////////////////////////////////
 
       // store a pointer to the function definition AST in the
       // high-level InstructionSequence: this is useful in case information
