@@ -336,10 +336,10 @@ void HighLevelCodegen::generate_non_assignment(Node *n, int binary_op) {
  **/
 void HighLevelCodegen::visit_binary_expression(Node *n) {
   int binary_op = n->get_kid(0)->get_tag();
-  // Visit left child
-  visit(n->get_kid(1));
   // Visit right child
   visit(n->get_kid(2));
+  // Visit left child
+  visit(n->get_kid(1));
 
   if (binary_op == TOK_ASSIGN) {
     generate_assignment(n);
