@@ -112,16 +112,20 @@ class ConstantPropagation : public ControlFlowGraphTransform {
     void process_definition(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq);
 };
 
+/**
+ * Copy propagation optimization.
+ **/
 class CopyPropagation : public ControlFlowGraphTransform {
   private:
-    // Map VREG to VREG to copy
-    std::unordered_map<Operand, Operand, OperandHasher> copy_map;
+    // Map VREG # to VREG # to copy
+    std::unordered_map<int, int> copy_map;
 
   public:
     CopyPropagation(const std::shared_ptr<ControlFlowGraph> &cfg);
     ~CopyPropagation();
 
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
+    void process_definition(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq);
 };
 
 class LocalRegisterAllocation : public ControlFlowGraphTransform {
