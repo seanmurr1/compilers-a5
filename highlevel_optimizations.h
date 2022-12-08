@@ -9,6 +9,16 @@
 #include <set>
 #include <utility>
 
+/**
+ * Utility class to perform all high-level optmizations.
+ **/
+class HighLevelOptimizer {
+  public:
+    HighLevelOptimizer();
+    ~HighLevelOptimizer();
+
+    std::shared_ptr<InstructionSequence> optimize(std::shared_ptr<InstructionSequence> &hl_iseq);
+};
 
 class DeadStoreElimination : public ControlFlowGraphTransform {
   private:
@@ -118,19 +128,28 @@ class LocalRegisterAllocation : public ControlFlowGraphTransform {
     int num_local_regs;
 
     // Local reg # to VREG #
-    std::vector<Operand> reverse_map;
+    std::vector<int> reverse_map;
     int cur_local_reg_idx;
 
     // Set of VREG #s that are alive at end of basic block and should not be mapped
-    std::set<Operand> do_not_map;
+    // or are already mapped to machine registers
+    std::set<int> do_not_map;
 
     // Opearnds mapped in current instruction
-    std::set<Operand> currently_mapped;
+    std::set<int> currently_mapped;
 
-    //********* TODO: change set to int bc idk if operand will work with set...
+    // Map VREG # to spill location offset
+    std::unordered_map<int, int> spilled_regs;
+    // Available spill locations (vector of offsets)
+    std::vector<bool> spill_locations;
 
-    // Map VREG # to local register
-    std::unordered_map<Operand, Operand, OperandHasher> local_reg_map;
+    // Map VREG # to local register #
+    std::unordered_map<int, int> local_reg_map;
+
+    int process_registers(const InstructionSequence *orig_bb);
+    void local_allocation(const InstructionSequence *orig_bb, std::shared_ptr<InstructionSequence> &result_iseq);
+    int allocate_register(std::shared_ptr<InstructionSequence> &result_iseq);
+    void allocate_and_assign_register(std::shared_ptr<InstructionSequence> &result_iseq, Operand op, bool def);
 
   public:
     LocalRegisterAllocation(const std::shared_ptr<ControlFlowGraph> &cfg);
@@ -138,7 +157,6 @@ class LocalRegisterAllocation : public ControlFlowGraphTransform {
 
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
 
-    void allocate_register(std::shared_ptr<InstructionSequence> &result_iseq, Operand op, bool def);
 };
 
 /**
@@ -148,12 +166,12 @@ class GlobalCalleeSavedRegAssignment {
   private:
     std::vector<MachineReg> mregs = {MachineReg::MREG_RBX, MachineReg::MREG_R12, MachineReg::MREG_R13, MachineReg::MREG_R14, MachineReg::MREG_R15};
     std::vector<std::string> mreg_names = {"\%rbx", "\%r12", "\%r13", "\%r14", "\%r15"};
-    
+
     std::vector<std::pair<int, int>> ref_counts;
     std::unordered_map<int, MachineReg> mapped_mregs;
 
     void update_ref_counts(std::shared_ptr<InstructionSequence> &orig_iseq, int last_local_var_reg);
-    void assign_mregs(std::vector<MachineReg> &assigned_mregs);
+    void assign_mregs(std::vector<MachineReg> &assigned_mregs, int num_local_vars);
     void tag_operands(std::shared_ptr<InstructionSequence> &orig_iseq, std::shared_ptr<InstructionSequence> &result_iseq);
 
   public:

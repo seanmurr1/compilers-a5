@@ -90,7 +90,6 @@ LowLevelCodeGen::~LowLevelCodeGen() {
 }
 
 std::shared_ptr<InstructionSequence> LowLevelCodeGen::generate(const std::shared_ptr<InstructionSequence> &hl_iseq) {
-  Node *funcdef_ast = hl_iseq->get_funcdef_ast();
 
   // cur_hl_iseq is the "current" version of the high-level IR,
   // which could be a transformed version if we are doing optimizations
@@ -98,38 +97,12 @@ std::shared_ptr<InstructionSequence> LowLevelCodeGen::generate(const std::shared
 
   if (m_optimize) {
     // High-level optimizations
-
-    // Create control-flow graph representation of high-level code
-    HighLevelControlFlowGraphBuilder hl_cfg_builder(cur_hl_iseq);
-    std::shared_ptr<ControlFlowGraph> cfg = hl_cfg_builder.build();
-
-    // Do local optimizations
-    // TODO
-    int num_iterations = 2;
-    for (int i = 0; i < num_iterations; i++) {
-      // Constant propagation
-      ConstantPropagation constant_prop(cfg);
-      cfg = constant_prop.transform_cfg();
-      // LVN
-      LocalValueNumbering lvn(cfg);
-      cfg = lvn.transform_cfg();
-      // Copy propagation
-      CopyPropagation copy_prop(cfg);
-      cfg = copy_prop.transform_cfg();
-      // Dead store elimination
-      DeadStoreElimination dead_elim(cfg);
-      cfg = dead_elim.transform_cfg();
-    }
-
-    // Convert transformed high-level CFG back into iseq
-    cur_hl_iseq = cfg->create_instruction_sequence();
-
-    // Function def AST might have info needed for low-level code generation
-    cur_hl_iseq->set_funcdef_ast(funcdef_ast);
+    HighLevelOptimizer hl_optimizer;
+    cur_hl_iseq = hl_optimizer.optimize(cur_hl_iseq);
   }
 
   // Translate (possibly transformed) high-level code into low-level code
-  std::shared_ptr<InstructionSequence> ll_iseq = translate_hl_to_ll(hl_iseq);
+  std::shared_ptr<InstructionSequence> ll_iseq = translate_hl_to_ll(cur_hl_iseq);
 
   if (m_optimize) {
     // ...could do transformations on the low-level code, possible peephole

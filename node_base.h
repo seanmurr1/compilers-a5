@@ -26,6 +26,7 @@
 #include "symtab.h"
 #include "literal_value.h"
 #include "instruction.h"
+#include "lowlevel.h"
 
 // The Node class will inherit from this type, so you can use it
 // to define any attributes and methods that Node objects should have
