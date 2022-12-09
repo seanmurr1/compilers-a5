@@ -667,8 +667,6 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       if (local_reg_map.count(reg) == 0) 
         allocate_and_assign_register(result_iseq, op, i == 0);
       
-      printf("Mapped local reg: %d\n", local_reg_map[reg]);
-
       new_ops[i] = Operand(op.get_kind(), local_reg_map[reg]); // TODO: should this just be Operand::VREG? for kind...
       currently_mapped.insert(reg);
       ops_mapped++;
@@ -689,8 +687,6 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
   // Process vregs in block
   int last_arg_reg_used = process_registers(orig_bb);
 
-  printf("last arg reg used: %d\n", last_arg_reg_used);
-
   // VREG # of first local reg to allocate
   start_local_reg = last_arg_reg_used + 1;
   num_local_regs = 7 - start_local_reg;
@@ -699,8 +695,6 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
   for (int i = 0; i < num_local_regs; i++)
     reverse_map[i] = -1;
 
-  printf("startign local reg: %d\n", start_local_reg);
-  printf("Num local regs: %d\n", num_local_regs);
   // Perform local register allocation
   local_allocation(orig_bb, result_iseq);
 
