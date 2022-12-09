@@ -369,6 +369,7 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
                                       // bc of sizing and all
   // Create hash key
   LVN_key key(left, right, op);
+  printf("Key: (%d, %d)\n", left.get_base_reg(), right.get_base_reg());
 
   if (lvn_map.count(key) == 0) {
     // Key not present: append original instruction
