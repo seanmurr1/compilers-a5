@@ -350,6 +350,12 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
     }
   }
   return result_iseq;
+
+
+  // TODO: issue: need to invalidate reverse mappings
+  // when we add a new mapping, need to invalidate all mappings
+  // that involve any of the registers (not constants) invovled in the 
+  // new mapping
 }
 
 /**
