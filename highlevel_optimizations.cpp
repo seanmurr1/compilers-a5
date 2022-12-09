@@ -24,7 +24,7 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   for (int i = 0; i < num_iterations; i++) {
     // Constant propagation
     ConstantPropagation constant_prop(cfg);
-    //cfg = constant_prop.transform_cfg();
+    cfg = constant_prop.transform_cfg();
     // LVN
     LocalValueNumbering lvn(cfg);
     //cfg = lvn.transform_cfg();
@@ -33,7 +33,7 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
     cfg = copy_prop.transform_cfg();
     // Dead store elimination
     DeadStoreElimination dead_elim(cfg);
-    //cfg = dead_elim.transform_cfg();
+    cfg = dead_elim.transform_cfg();
   }
 
   // Local register allocation
