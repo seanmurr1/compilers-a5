@@ -118,9 +118,9 @@ class ConstantPropagation : public ControlFlowGraphTransform {
 class CopyPropagation : public ControlFlowGraphTransform {
   private:
     // Map VREG # to VREG # to copy
-    std::unordered_map<int, int> copy_map;
+    std::unordered_map<Operand, Operand, OperandHasher> copy_map;
 
-    std::unordered_map<int, std::set<int>> reverse_map;
+    std::unordered_map<Operand, std::set<Operand>> reverse_map;
 
   public:
     CopyPropagation(const std::shared_ptr<ControlFlowGraph> &cfg);

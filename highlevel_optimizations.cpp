@@ -458,44 +458,51 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
   Operand dest = orig_ins->get_operand(0);
   int reg = dest.get_base_reg();
   
-  std::set<int> &reverse_mappings = reverse_map[reg];
-  for (auto i : reverse_mappings) 
-    if (copy_map.count(i) == 1 && copy_map[i] == reg)
-      copy_map.erase(i);
-  reverse_mappings.clear();
+  if (reverse_map.count(dest) == 1) {
+    std::set<Operand> &reverse_mappings = reverse_map[dest];
+    for (auto i : reverse_mappings) 
+      if (copy_map.count(i) == 1 && (copy_map[i] == dest || copy_map[i] == dest.to_memref())) {
+        copy_map.erase(i);
+        copy_map.erase(i.to_memref());
+      }
+    reverse_mappings.clear();
+    reverse_map.erase(dest);
+  }
   
   if (match_hl(HINS_localaddr, opcode)) {
-    copy_map.erase(reg);
+    copy_map.erase(dest);
+    copy_map.erase(dest.to_memref());
     result_iseq->append(orig_ins->duplicate());
   } else if (match_hl(HINS_mov_b, opcode)) {
     if (orig_ins->get_operand(1).is_imm_ival()) {
       // Dest no longer tracks a vreg to copy: remove from map
-      copy_map.erase(reg);
+      copy_map.erase(dest);
+      copy_map.erase(dest.to_memref());
     } else {
       // Dest tracks vreg to copy into: add to map
-      int copy_reg = orig_ins->get_operand(1).get_base_reg();
-      copy_map[reg] = copy_reg;
-      reverse_map[copy_reg].insert(reg);
+      Operand copy = orig_ins->get_operand(1);
+      copy_map[dest] = copy;
+      reverse_map[copy].insert(dest);
     }
     // Duplicate instruction
     result_iseq->append(orig_ins->duplicate());
   } else if (num_operands == 2) {
     Operand right = orig_ins->get_operand(1);
-    if (right.has_base_reg() && copy_map.count(right.get_base_reg()) == 1) 
+    if (right.has_base_reg() && copy_map.count(right) == 1) 
       // We have a copy stored
-      right = Operand(Operand::VREG, copy_map[right.get_base_reg()]);
+      right = copy_map[right];
     result_iseq->append(new Instruction(opcode, dest, right));
   } else if (num_operands == 3) {
     Operand left = orig_ins->get_operand(1);
     Operand right = orig_ins->get_operand(2);
 
     // Check if we have a stored copies for operands
-    if (right.has_base_reg() && copy_map.count(right.get_base_reg()) == 1) 
+    if (right.has_base_reg() && copy_map.count(right) == 1) 
       // We have a copy stored
-      right = Operand(Operand::VREG, copy_map[right.get_base_reg()]);
-    if (left.has_base_reg() && copy_map.count(left.get_base_reg()) == 1) 
+      right = copy_map[right];
+    if (left.has_base_reg() && copy_map.count(left) == 1) 
       // We have a copy stored
-      left = Operand(Operand::VREG, copy_map[left.get_base_reg()]);
+      left = copy_map[left];
     result_iseq->append(new Instruction(opcode, dest, left, right));
   }
 }
