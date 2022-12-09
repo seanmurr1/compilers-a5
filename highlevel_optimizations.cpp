@@ -356,6 +356,8 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
   // when we add a new mapping, need to invalidate all mappings
   // that involve any of the registers (not constants) invovled in the 
   // new mapping
+
+  // or maybe with localaddr????
 }
 
 /**
