@@ -341,7 +341,10 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
         Operand to_copy = lvn_map[key];
         int mov_shift = get_opcode_offset(opcode);
         HighLevelOpcode mov_opcode = (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
-        result_iseq->append(new Instruction(mov_opcode, dest, to_copy));
+
+        // TODO: ADDED
+        if (!(dest == to_copy))
+          result_iseq->append(new Instruction(mov_opcode, dest, to_copy));
       }
       // Update map
       lvn_map[key] = dest;
