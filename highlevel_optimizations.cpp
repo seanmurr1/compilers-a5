@@ -73,7 +73,7 @@ std::shared_ptr<InstructionSequence> DeadStoreElimination::transform_basic_block
 
       LiveVregs::FactType live_after = m_live_vregs.get_fact_after_instruction(orig_bb_as_basic_block, orig_ins);
 
-      if (!live_after.test(dest.get_base_reg()) && dest.get_base_reg() <= 6)
+      if (!live_after.test(dest.get_base_reg()) && dest.get_base_reg() > 6)
         // Dest register is immediately dead after this instruction
         // so it can be eliminated 
        preserve_instruction = false; 
