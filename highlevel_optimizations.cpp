@@ -14,7 +14,7 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
 
   // Global callee-saved register assignment
   GlobalCalleeSavedRegAssignment global_assigner;
-  cur_hl_iseq = global_assigner.optimize(cur_hl_iseq);
+  //cur_hl_iseq = global_assigner.optimize(cur_hl_iseq);
 
   // Build CFG
   HighLevelControlFlowGraphBuilder hl_cfg_builder(cur_hl_iseq);
@@ -24,16 +24,16 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   for (int i = 0; i < num_iterations; i++) {
     // Constant propagation
     ConstantPropagation constant_prop(cfg);
-    cfg = constant_prop.transform_cfg();
+    //cfg = constant_prop.transform_cfg();
     // LVN
     LocalValueNumbering lvn(cfg);
-    //cfg = lvn.transform_cfg();
+    cfg = lvn.transform_cfg();
     // Copy propagation
     CopyPropagation copy_prop(cfg);
-    cfg = copy_prop.transform_cfg();
+    //cfg = copy_prop.transform_cfg();
     // Dead store elimination
     DeadStoreElimination dead_elim(cfg);
-    cfg = dead_elim.transform_cfg();
+    //cfg = dead_elim.transform_cfg();
   }
 
   // Local register allocation
