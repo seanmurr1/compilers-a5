@@ -467,6 +467,8 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
       printf("%d no longer tracks %d\n", i, reg);
     }
   reverse_mappings.clear();
+
+  printf("count after rev: %d\n", copy_map.count(12));
   
   if (match_hl(HINS_localaddr, opcode)) {
     copy_map.erase(reg);
