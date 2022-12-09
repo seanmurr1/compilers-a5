@@ -90,10 +90,11 @@ LowLevelCodeGen::~LowLevelCodeGen() {
 }
 
 std::shared_ptr<InstructionSequence> LowLevelCodeGen::generate(const std::shared_ptr<InstructionSequence> &hl_iseq) {
-
+  Node *funcdef_ast = hl_iseq->get_funcdef_ast();
   // cur_hl_iseq is the "current" version of the high-level IR,
   // which could be a transformed version if we are doing optimizations
   std::shared_ptr<InstructionSequence> cur_hl_iseq(hl_iseq);
+  cur_hl_iseq->set_funcdef_ast(funcdef_ast);
 
   if (m_optimize) {
     // High-level optimizations
