@@ -496,10 +496,10 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     Operand right = orig_ins->get_operand(2);
     // Check if we have a stored copies for operands
     if (right.has_base_reg() && copy_map.count(right.get_base_reg()) == 1) 
-      // We have a constant stored
+      // We have a copy stored
       right = Operand(Operand::VREG, copy_map[right.get_base_reg()]);
     if (left.has_base_reg() && copy_map.count(left.get_base_reg()) == 1) 
-      // We have a constant stored
+      // We have a copy stored
       left = Operand(Operand::VREG, copy_map[left.get_base_reg()]);
     result_iseq->append(new Instruction(opcode, dest, left, right));
   }
@@ -511,7 +511,7 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
 std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(const InstructionSequence *orig_bb) {
   // Clear map first
   copy_map.clear();
-
+  printf("New block!\n\n");
   std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
 
   for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
