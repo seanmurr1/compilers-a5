@@ -704,7 +704,7 @@ void LocalRegisterAllocation::allocate_and_assign_register(std::shared_ptr<Instr
 }
 
 int LocalRegisterAllocation::get_num_reg_spilled() {
-  return spill_locations.size();
+  return max_reg_spilled;
 }
 
 // TODO: need to track largset number of spilled registers ever encountered
