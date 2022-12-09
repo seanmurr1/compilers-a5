@@ -457,6 +457,8 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
   unsigned num_operands = orig_ins->get_num_operands();
   Operand dest = orig_ins->get_operand(0);
   int reg = dest.get_base_reg();
+  
+  printf("count before ins: %d\n", copy_map.count(12));
 
   std::set<int> &reverse_mappings = reverse_map[reg];
   for (auto i : reverse_mappings) 
@@ -526,7 +528,7 @@ std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(cons
   copy_map.clear();
   printf("New block!\n\n");
   printf("count: %d\n\n", copy_map.count(12));
-  
+
   std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
 
   for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
