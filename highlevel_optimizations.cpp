@@ -498,6 +498,7 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     if (opcode == HINS_add_l) {
       printf("left vreg %d\n", left.get_base_reg());
       printf("right vreg %d\n", right.get_base_reg());
+      printf("count: %d\n", copy_map.count(left.get_base_reg()));
     }
 
     // Check if we have a stored copies for operands
