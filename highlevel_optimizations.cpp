@@ -494,6 +494,12 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
   } else if (num_operands == 3) {
     Operand left = orig_ins->get_operand(1);
     Operand right = orig_ins->get_operand(2);
+
+    if (opcode == HINS_add_l) {
+      printf("left vreg %d\n", left.get_base_reg());
+      printf("right vreg %d\n", right.get_base_reg());
+    }
+
     // Check if we have a stored copies for operands
     if (right.has_base_reg() && copy_map.count(right.get_base_reg()) == 1) 
       // We have a copy stored
@@ -502,6 +508,12 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
       // We have a copy stored
       left = Operand(Operand::VREG, copy_map[left.get_base_reg()]);
     result_iseq->append(new Instruction(opcode, dest, left, right));
+
+    if (opcode == HINS_add_l) {
+      printf("left vreg %d\n", left.get_base_reg());
+      printf("right vreg %d\n", right.get_base_reg());
+    }
+
   }
 }
 
