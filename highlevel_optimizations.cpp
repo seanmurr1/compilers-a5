@@ -24,13 +24,13 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   for (int i = 0; i < num_iterations; i++) {
     // Constant propagation
     ConstantPropagation constant_prop(cfg);
-    //cfg = constant_prop.transform_cfg();
+    cfg = constant_prop.transform_cfg();
     // LVN
     LocalValueNumbering lvn(cfg);
     //cfg = lvn.transform_cfg();
     // Copy propagation
     CopyPropagation copy_prop(cfg);
-    cfg = copy_prop.transform_cfg();
+    //cfg = copy_prop.transform_cfg();
     // Dead store elimination
     DeadStoreElimination dead_elim(cfg);
     //cfg = dead_elim.transform_cfg();
@@ -378,24 +378,37 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
     }
     // Duplicate instruction
     result_iseq->append(orig_ins->duplicate());
-  } else if (num_operands == 2) {
-    Operand right = orig_ins->get_operand(1);
-    if (right.has_base_reg() && constants_map.count(right) == 1) 
-      // We have a constant stored
-      right = Operand(Operand::IMM_IVAL, constants_map[right]);
-    result_iseq->append(new Instruction(opcode, dest, right));
-  } else if (num_operands == 3) {
-    Operand left = orig_ins->get_operand(1);
-    Operand right = orig_ins->get_operand(2);
-    // Check if we have a stored constant for operands
-    if (right.has_base_reg() && constants_map.count(right) == 1) 
-      // We have a constant stored
-      right = Operand(Operand::IMM_IVAL, constants_map[right]);
-    if (left.has_base_reg() && constants_map.count(left) == 1) 
-      // We have a constant stored
-      left = Operand(Operand::IMM_IVAL, constants_map[left]);
-    result_iseq->append(new Instruction(opcode, dest, left, right));
-  }
+  } else {
+    std::vector<Operand> new_ops(num_operands);
+    new_ops[0] = dest;
+    for (int i = 1; i < num_operands; i++) {
+      Operand op = orig_ins->get_operand(i);
+      if (op.has_base_reg() && constants_map.count(op) == 1)
+        // We have a copy stored
+        op = Operand(Operand::IMM_IVAL, constants_map[op]);
+      new_ops[i] = op;
+    }
+    add_variable_length_ins(orig_ins, result_iseq, new_ops);
+  } 
+  
+  // else if (num_operands == 2) {
+  //   Operand right = orig_ins->get_operand(1);
+  //   if (right.has_base_reg() && constants_map.count(right) == 1) 
+  //     // We have a constant stored
+  //     right = Operand(Operand::IMM_IVAL, constants_map[right]);
+  //   result_iseq->append(new Instruction(opcode, dest, right));
+  // } else if (num_operands == 3) {
+  //   Operand left = orig_ins->get_operand(1);
+  //   Operand right = orig_ins->get_operand(2);
+  //   // Check if we have a stored constant for operands
+  //   if (right.has_base_reg() && constants_map.count(right) == 1) 
+  //     // We have a constant stored
+  //     right = Operand(Operand::IMM_IVAL, constants_map[right]);
+  //   if (left.has_base_reg() && constants_map.count(left) == 1) 
+  //     // We have a constant stored
+  //     left = Operand(Operand::IMM_IVAL, constants_map[left]);
+  //   result_iseq->append(new Instruction(opcode, dest, left, right));
+  // }
 }
 
 /**
@@ -505,27 +518,6 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     }
     add_variable_length_ins(orig_ins, result_iseq, new_ops);
   }
-  
-  // else if (num_operands == 2) {
-  //   Operand right = orig_ins->get_operand(1);
-  //   if (right.has_base_reg() && copy_map.count(right) == 1) 
-  //     // We have a copy stored
-  //     right = copy_map[right];
-  //   result_iseq->append(new Instruction(opcode, dest, right));
-  // } else if (num_operands == 3) {
-  //   Operand left = orig_ins->get_operand(1);
-  //   Operand right = orig_ins->get_operand(2);
-
-  //   // Check if we have a stored copies for operands
-  //   if (right.has_base_reg() && copy_map.count(right) == 1) 
-  //     // We have a copy stored
-  //     right = copy_map[right];
-  //   if (left.has_base_reg() && copy_map.count(left) == 1) 
-  //     // We have a copy stored
-  //     left = copy_map[left];
-  //   result_iseq->append(new Instruction(opcode, dest, left, right));
-  // }
-
 }
 
 /**
