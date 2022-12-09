@@ -40,6 +40,7 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   LocalRegisterAllocation local_assigner(cfg);
   cfg = local_assigner.transform_cfg();
   int num_reg_spilled = local_assigner.get_num_reg_spilled();
+  printf("Num reg spilled: %d\n", num_reg_spilled);
   funcdef_ast->set_max_temp_vreg(num_reg_spilled + 9);
 
   // Convert transformed high-level CFG back into iseq
