@@ -130,7 +130,7 @@ bool Operand::operator==(const Operand &other) const {
 bool Operand::operator<(const Operand &other) const {
     // Check for matching operand kind
   if (m_kind != other.m_kind)
-    return mkind < other.m_kind;
+    return m_kind < other.m_kind;
 
   if (is_imm_ival())
     return m_imm_ival < other.m_imm_ival;
