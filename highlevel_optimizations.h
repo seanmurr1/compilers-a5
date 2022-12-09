@@ -101,7 +101,7 @@ class OperandHasher {
  **/
 class ConstantPropagation : public ControlFlowGraphTransform {
   private:
-    // Map VREG # to constant value
+    // Map VREG to constant value
     std::unordered_map<Operand, int, OperandHasher> constants_map;
 
   public:

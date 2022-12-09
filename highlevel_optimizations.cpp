@@ -370,11 +370,9 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
   } else if (match_hl(HINS_mov_b, opcode)) {
     if (orig_ins->get_operand(1).is_imm_ival()) {
       // Dest now tracks a constant: add to map
-      //constants_map[reg] = orig_ins->get_operand(1).get_imm_ival();
       constants_map[dest] = orig_ins->get_operand(1).get_imm_ival();
     } else {
       // Dest no longer tracks a constant: remove from map
-      //constants_map.erase(reg);
       constants_map.erase(dest);
       constants_map.erase(dest.to_memref());
     }
