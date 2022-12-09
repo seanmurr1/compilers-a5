@@ -462,7 +462,7 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
   for (auto i : reverse_mappings) 
     if (copy_map[i] == reg) {
       copy_map.erase(i);
-      printf("$d no longer tracks $d\n", i, reg);
+      printf("%d no longer tracks %d\n", i, reg);
     }
   reverse_mappings.clear();
   
@@ -473,13 +473,13 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     if (orig_ins->get_operand(1).is_imm_ival()) {
       // Dest no longer tracks a vreg to copy: remove from map
       copy_map.erase(reg);
-      printf("$d no longer tracks\n", reg);
+      printf("%d no longer tracks\n", reg);
     } else {
       // Dest tracks vreg to copy into: add to map
       int copy_reg = orig_ins->get_operand(1).get_base_reg();
       copy_map[reg] = copy_reg;
 
-      printf("$d now tracks $d\n", reg, copy_reg);
+      printf("%d now tracks %d\n", reg, copy_reg);
 
       reverse_map[copy_reg].insert(reg);
     }
