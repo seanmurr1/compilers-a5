@@ -525,6 +525,8 @@ std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(cons
   // Clear map first
   copy_map.clear();
   printf("New block!\n\n");
+  printf("count: %d\n\n", copy_map.count(12));
+  
   std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
 
   for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
