@@ -458,17 +458,11 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
   Operand dest = orig_ins->get_operand(0);
   int reg = dest.get_base_reg();
   
-  printf("count before ins: %d\n", copy_map.count(12));
-
   std::set<int> &reverse_mappings = reverse_map[reg];
   for (auto i : reverse_mappings) 
-    if (copy_map.count(i) == 1 && copy_map[i] == reg) {
+    if (copy_map.count(i) == 1 && copy_map[i] == reg)
       copy_map.erase(i);
-      printf("%d no longer tracks %d\n", i, reg);
-    }
   reverse_mappings.clear();
-
-  printf("count after rev: %d\n", copy_map.count(12));
   
   if (match_hl(HINS_localaddr, opcode)) {
     copy_map.erase(reg);
@@ -477,14 +471,10 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     if (orig_ins->get_operand(1).is_imm_ival()) {
       // Dest no longer tracks a vreg to copy: remove from map
       copy_map.erase(reg);
-      printf("%d no longer tracks\n", reg);
     } else {
       // Dest tracks vreg to copy into: add to map
       int copy_reg = orig_ins->get_operand(1).get_base_reg();
       copy_map[reg] = copy_reg;
-
-      printf("%d now tracks %d\n", reg, copy_reg);
-
       reverse_map[copy_reg].insert(reg);
     }
     // Duplicate instruction
@@ -499,12 +489,6 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     Operand left = orig_ins->get_operand(1);
     Operand right = orig_ins->get_operand(2);
 
-    if (opcode == HINS_add_l) {
-      printf("left vreg %d\n", left.get_base_reg());
-      printf("right vreg %d\n", right.get_base_reg());
-      printf("count: %d\n", copy_map.count(left.get_base_reg()));
-    }
-
     // Check if we have a stored copies for operands
     if (right.has_base_reg() && copy_map.count(right.get_base_reg()) == 1) 
       // We have a copy stored
@@ -513,12 +497,6 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
       // We have a copy stored
       left = Operand(Operand::VREG, copy_map[left.get_base_reg()]);
     result_iseq->append(new Instruction(opcode, dest, left, right));
-
-    if (opcode == HINS_add_l) {
-      printf("left vreg %d\n", left.get_base_reg());
-      printf("right vreg %d\n", right.get_base_reg());
-    }
-
   }
 }
 
@@ -528,8 +506,6 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
 std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(const InstructionSequence *orig_bb) {
   // Clear map first
   copy_map.clear();
-  printf("New block!\n\n");
-  printf("count: %d\n\n", copy_map.count(12));
 
   std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
 
