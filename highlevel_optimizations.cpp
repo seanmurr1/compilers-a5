@@ -318,7 +318,7 @@ void LocalValueNumbering::fix_commutativity(std::vector<Operand> &right_side) {
   printf("Fixing...\n");
   bool swap = false;
   if (right_side[0].has_base_reg() && right_side[1].has_base_reg())
-    if (right_side[1] < right_side[0]) {
+    if (right_side[1].get_base_reg() < right_side[0].get_base_reg()) {
       swap = true;
       printf("both reg and right < left...\n");
     }
