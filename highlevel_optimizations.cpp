@@ -24,13 +24,13 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   for (int i = 0; i < num_iterations; i++) {
     // Constant propagation
     ConstantPropagation constant_prop(cfg);
-    cfg = constant_prop.transform_cfg();
+    //cfg = constant_prop.transform_cfg();
     // LVN
     LocalValueNumbering lvn(cfg);
     //cfg = lvn.transform_cfg();
     // Copy propagation
     CopyPropagation copy_prop(cfg);
-    //cfg = copy_prop.transform_cfg();
+    cfg = copy_prop.transform_cfg();
     // Dead store elimination
     DeadStoreElimination dead_elim(cfg);
     //cfg = dead_elim.transform_cfg();
@@ -485,7 +485,11 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     } else {
       // Dest tracks vreg to copy into: add to map
       Operand copy = orig_ins->get_operand(1);
-      if (!dest.is_memref() && !copy.is_memref()) {
+      // if (!dest.is_memref() && !copy.is_memref()) {
+      //   copy_map[dest] = copy;
+      //   reverse_map[copy].insert(dest);
+      // }      
+      if (!copy.is_memref()) {
         copy_map[dest] = copy;
         reverse_map[copy].insert(dest);
       }      
