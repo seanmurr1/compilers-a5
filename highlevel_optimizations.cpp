@@ -39,6 +39,8 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   // Local register allocation
   LocalRegisterAllocation local_assigner(cfg);
   cfg = local_assigner.transform_cfg();
+  int num_reg_spilled = local_assigner.get_num_reg_spilled();
+  funcdef_ast->set_max_temp_vreg(num_reg_spilled + 9);
 
   // Convert transformed high-level CFG back into iseq
   cur_hl_iseq = cfg->create_instruction_sequence();
@@ -626,10 +628,6 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
   // Perform local register allocation
   local_allocation(orig_bb, result_iseq);
 
-  // Update storage used for virtual registers
-  int max_registers_spilled = spill_locations.size();
-  orig_bb->get_funcdef_ast()->set_max_temp_vreg(max_registers_spilled + 9);
-
   return result_iseq;
 }
 
@@ -699,6 +697,10 @@ void LocalRegisterAllocation::allocate_and_assign_register(std::shared_ptr<Instr
   reverse_map[cur_local_reg_idx] = reg;
 
   cur_local_reg_idx = (cur_local_reg_idx + 1) % num_local_regs;
+}
+
+int LocalRegisterAllocation::get_num_reg_spilled() {
+  return spill_locations.size();
 }
 
 // TODO: need to track largset number of spilled registers ever encountered

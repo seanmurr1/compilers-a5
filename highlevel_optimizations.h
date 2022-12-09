@@ -169,6 +169,7 @@ class LocalRegisterAllocation : public ControlFlowGraphTransform {
     ~LocalRegisterAllocation();
 
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
+    int get_num_reg_spilled();
 
 };
 
