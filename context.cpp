@@ -184,16 +184,16 @@ void Context::highlevel_codegen(ModuleCollector *module_collector) {
       std::string fn_name = child->get_kid(1)->get_str();
       std::shared_ptr<InstructionSequence> hl_iseq = hl_codegen.get_hl_iseq();
 
-      // TODO
-      HighLevelOptimizer hl_optimizer;
-      hl_iseq = hl_optimizer.optimize(hl_iseq);
-      //////////////////////////////////////////////////////
-
       // store a pointer to the function definition AST in the
       // high-level InstructionSequence: this is useful in case information
       // about the function definition is needed by the low-level
       // code generator
       hl_iseq->set_funcdef_ast(child);
+
+      // TODO
+      HighLevelOptimizer hl_optimizer;
+      hl_iseq = hl_optimizer.optimize(hl_iseq);
+      //////////////////////////////////////////////////////
 
       module_collector->collect_function(fn_name, hl_iseq);
 
