@@ -462,7 +462,7 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
 
   std::set<int> &reverse_mappings = reverse_map[reg];
   for (auto i : reverse_mappings) 
-    if (copy_map[i] == reg) {
+    if (copy_map.count(i) == 1 && copy_map[i] == reg) {
       copy_map.erase(i);
       printf("%d no longer tracks %d\n", i, reg);
     }
