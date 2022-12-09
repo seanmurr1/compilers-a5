@@ -33,7 +33,7 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
     cfg = copy_prop.transform_cfg();
     // Dead store elimination
     DeadStoreElimination dead_elim(cfg);
-    cfg = dead_elim.transform_cfg();
+    //cfg = dead_elim.transform_cfg();
   }
 
   // Local register allocation
