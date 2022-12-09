@@ -24,16 +24,16 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   for (int i = 0; i < num_iterations; i++) {
     // Constant propagation
     ConstantPropagation constant_prop(cfg);
-    //cfg = constant_prop.transform_cfg();
+    cfg = constant_prop.transform_cfg();
     // LVN
     LocalValueNumbering lvn(cfg);
     //cfg = lvn.transform_cfg();
     // Copy propagation
     CopyPropagation copy_prop(cfg);
-    //cfg = copy_prop.transform_cfg();
+    cfg = copy_prop.transform_cfg();
     // Dead store elimination
     DeadStoreElimination dead_elim(cfg);
-    //cfg = dead_elim.transform_cfg();
+    cfg = dead_elim.transform_cfg();
   }
 
   // Local register allocation
@@ -771,7 +771,7 @@ void GlobalCalleeSavedRegAssignment::tag_operands(std::shared_ptr<InstructionSeq
 
     int num_operands = orig_ins->get_num_operands();
     std::vector<Operand> new_ops(num_operands);
-    
+
     for (int i = 0; i < num_operands; i++) {
       Operand op = orig_ins->get_operand(i);
       new_ops[i] = op;
