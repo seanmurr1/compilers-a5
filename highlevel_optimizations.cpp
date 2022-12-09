@@ -462,6 +462,7 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
   Operand dest = orig_ins->get_operand(0);
   int reg = dest.get_base_reg();
   
+  // Remove reverse mappings
   if (reverse_map.count(dest) == 1) {
     std::set<Operand> &reverse_mappings = reverse_map[dest];
     for (auto i : reverse_mappings) 
@@ -484,11 +485,7 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
       copy_map.erase(dest.to_memref());
     } else {
       // Dest tracks vreg to copy into: add to map
-      Operand copy = orig_ins->get_operand(1);
-      // if (!dest.is_memref() && !copy.is_memref()) {
-      //   copy_map[dest] = copy;
-      //   reverse_map[copy].insert(dest);
-      // }      
+      Operand copy = orig_ins->get_operand(1);  
       if (!copy.is_memref()) {
         copy_map[dest] = copy;
         reverse_map[copy].insert(dest);
@@ -496,25 +493,39 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     }
     // Duplicate instruction
     result_iseq->append(orig_ins->duplicate());
-  } else if (num_operands == 2) {
-    Operand right = orig_ins->get_operand(1);
-    if (right.has_base_reg() && copy_map.count(right) == 1) 
-      // We have a copy stored
-      right = copy_map[right];
-    result_iseq->append(new Instruction(opcode, dest, right));
-  } else if (num_operands == 3) {
-    Operand left = orig_ins->get_operand(1);
-    Operand right = orig_ins->get_operand(2);
-
-    // Check if we have a stored copies for operands
-    if (right.has_base_reg() && copy_map.count(right) == 1) 
-      // We have a copy stored
-      right = copy_map[right];
-    if (left.has_base_reg() && copy_map.count(left) == 1) 
-      // We have a copy stored
-      left = copy_map[left];
-    result_iseq->append(new Instruction(opcode, dest, left, right));
+  } else {
+    std::vector<Operand> new_ops(num_operands);
+    new_ops[0] = dest;
+    for (int i = 1; i < num_operands; i++) {
+      Operand op = orig_ins->get_operand(i);
+      if (op.has_base_reg() && copy_map.count(op) == 1)
+        // We have a copy stored
+        op = copy_map[op];
+      new_ops[i] = op;
+    }
+    add_variable_length_ins(orig_ins, result_iseq, new_ops);
   }
+  
+  // else if (num_operands == 2) {
+  //   Operand right = orig_ins->get_operand(1);
+  //   if (right.has_base_reg() && copy_map.count(right) == 1) 
+  //     // We have a copy stored
+  //     right = copy_map[right];
+  //   result_iseq->append(new Instruction(opcode, dest, right));
+  // } else if (num_operands == 3) {
+  //   Operand left = orig_ins->get_operand(1);
+  //   Operand right = orig_ins->get_operand(2);
+
+  //   // Check if we have a stored copies for operands
+  //   if (right.has_base_reg() && copy_map.count(right) == 1) 
+  //     // We have a copy stored
+  //     right = copy_map[right];
+  //   if (left.has_base_reg() && copy_map.count(left) == 1) 
+  //     // We have a copy stored
+  //     left = copy_map[left];
+  //   result_iseq->append(new Instruction(opcode, dest, left, right));
+  // }
+
 }
 
 /**
