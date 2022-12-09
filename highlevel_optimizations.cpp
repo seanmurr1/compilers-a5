@@ -481,8 +481,10 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     } else {
       // Dest tracks vreg to copy into: add to map
       Operand copy = orig_ins->get_operand(1);
-      copy_map[dest] = copy;
-      reverse_map[copy].insert(dest);
+      if (!dest.is_memref() && !copy.is_memref()) {
+        copy_map[dest] = copy;
+        reverse_map[copy].insert(dest);
+      }      
     }
     // Duplicate instruction
     result_iseq->append(orig_ins->duplicate());
