@@ -766,9 +766,12 @@ void GlobalCalleeSavedRegAssignment::assign_mregs(std::vector<MachineReg> &assig
 void GlobalCalleeSavedRegAssignment::tag_operands(std::shared_ptr<InstructionSequence> &orig_iseq, std::shared_ptr<InstructionSequence> &result_iseq) {
   for (auto i = orig_iseq->cbegin(); i != orig_iseq->cend(); i++) {
     Instruction *orig_ins = *i;
-    int num_operands = orig_ins->get_num_operands();
+    if (i.has_label()) 
+      result_iseq->define_label(i.get_label());
 
+    int num_operands = orig_ins->get_num_operands();
     std::vector<Operand> new_ops(num_operands);
+    
     for (int i = 0; i < num_operands; i++) {
       Operand op = orig_ins->get_operand(i);
       new_ops[i] = op;
