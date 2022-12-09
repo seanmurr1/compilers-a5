@@ -156,6 +156,8 @@ class LocalRegisterAllocation : public ControlFlowGraphTransform {
     // Available spill locations (vector of offsets)
     std::vector<bool> spill_locations;
 
+    int max_reg_spilled;
+
     // Map VREG # to local register #
     std::unordered_map<int, int> local_reg_map;
 

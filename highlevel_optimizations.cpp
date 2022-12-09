@@ -531,7 +531,8 @@ std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(cons
 /*************** LOCAL REGISTER ALLOCATION ****************/
 LocalRegisterAllocation::LocalRegisterAllocation(const std::shared_ptr<ControlFlowGraph> &cfg)
   : ControlFlowGraphTransform(cfg)
-  , m_live_vregs(cfg) {
+  , m_live_vregs(cfg)
+  , max_reg_spilled(0) {
     m_live_vregs.execute();
 }
 
@@ -627,6 +628,9 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
 
   // Perform local register allocation
   local_allocation(orig_bb, result_iseq);
+
+  if (spill_locations.size() > max_reg_spilled)
+    max_reg_spilled = spill_locations.size();
 
   return result_iseq;
 }
