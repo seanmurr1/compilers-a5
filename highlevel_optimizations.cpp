@@ -315,15 +315,10 @@ void LocalValueNumbering::invalidate_mappings(Operand op) {
 }
 
 void LocalValueNumbering::fix_commutativity(std::vector<Operand> &right_side) {
-  printf("Fixing...\n");
   bool swap = false;
   if (right_side[0].has_base_reg() && right_side[1].has_base_reg()) {
-    if (right_side[1].get_base_reg() < right_side[0].get_base_reg()) {
+    if (right_side[1] < right_side[0]) 
       swap = true;
-      printf("both reg and right < left...\n");
-      printf("Right: %d\n", right_side[1].get_base_reg());
-      printf("Left: %d\n", right_side[0].get_base_reg());
-    }
   } else if (right_side[1].has_base_reg()) {
     swap = true;
   }
@@ -357,7 +352,7 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
   // Algebraic identities
   if (check_algebraic_identities(result_iseq, orig_ins))
     return;   
-  printf("Key before: (%d, %d)\n", left.get_base_reg(), right.get_base_reg());
+
   HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();   
   std::vector<Operand> right_side(2);
   right_side[0] = left;
@@ -370,13 +365,11 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
   // Local Value Numbering
   left = right_side[0];
   right = right_side[1];
-  printf("Key after: (%d, %d)\n", left.get_base_reg(), right.get_base_reg());
 
   Operator op = get_operator(opcode); // TODO: maybe just use HighLevelOpcode to hash
                                       // bc of sizing and all
   // Create hash key
   LVN_key key(left, right, op);
-  printf("Key: (%d, %d)\n", left.get_base_reg(), right.get_base_reg());
 
   if (lvn_map.count(key) == 0) {
     // Key not present: append original instruction
@@ -391,7 +384,6 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
 
   // Update maps
   lvn_map[key] = dest;
-  printf("(%d, %d) mapped to %d\n", left.get_base_reg(), right.get_base_reg(), dest.get_base_reg());
   reverse_map[dest].insert(key); 
   if (left.has_base_reg())
     reverse_map[left].insert(key);
