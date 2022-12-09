@@ -127,6 +127,24 @@ bool Operand::operator==(const Operand &other) const {
   assert(false);
 }
 
+bool Operand::operator<(const Operand &other) const {
+    // Check for matching operand kind
+  if (m_kind != other.m_kind)
+    return mkind < other.m_kind;
+
+  if (is_imm_ival())
+    return m_imm_ival < other.m_imm_ival;
+
+  if (is_label() || is_imm_label())
+    return m_label < other.m_label;
+
+  if (has_base_reg()) 
+    return m_basereg < other.m_basereg;
+
+  // Should be unreachable
+  assert(false);
+}
+
 std::size_t Operand::hash() const {
   return ((std::hash<int>()(m_kind)
            ^ (std::hash<int>()(m_basereg) << 1)) >> 1)

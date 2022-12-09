@@ -60,6 +60,7 @@ public:
   // use compiler-generated copy ctor and assignment op
 
   bool operator==(const Operand &other) const;
+  bool operator<(const Operand &other) const;
   std::size_t hash() const;
 
   void assign_mreg(int mreg) { m_mreg = mreg; }
