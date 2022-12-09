@@ -692,14 +692,15 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
   printf("last arg reg used: %d\n", last_arg_reg_used);
 
   // VREG # of first local reg to allocate
-  int starting_local_reg = last_arg_reg_used + 1;
-  int num_local_regs = 7 - starting_local_reg;
+  start_local_reg = last_arg_reg_used + 1;
+  num_local_regs = 7 - start_local_reg;
   cur_local_reg_idx = 0;
   reverse_map = std::vector<int>(num_local_regs);
   for (int i = 0; i < num_local_regs; i++)
     reverse_map[i] = -1;
 
   printf("startign local reg: %d\n", start_local_reg);
+  printf("Num local regs: %d\n", num_local_regs);
   // Perform local register allocation
   local_allocation(orig_bb, result_iseq);
 
