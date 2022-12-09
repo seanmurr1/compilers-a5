@@ -96,8 +96,6 @@ std::shared_ptr<InstructionSequence> LowLevelCodeGen::generate(const std::shared
   std::shared_ptr<InstructionSequence> cur_hl_iseq(hl_iseq);
   cur_hl_iseq->set_funcdef_ast(funcdef_ast);
 
-  printf("start here: %d", funcdef_ast->get_max_temp_vreg());
-
   if (m_optimize) {
     // High-level optimizations
     HighLevelOptimizer hl_optimizer;
