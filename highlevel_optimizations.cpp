@@ -8,9 +8,8 @@ HighLevelOptimizer::HighLevelOptimizer() { }
 
 HighLevelOptimizer::~HighLevelOptimizer() { }
 
-std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_ptr<InstructionSequence> &hl_iseq) {
-  Node *funcdef_ast = hl_iseq->get_funcdef_ast();
-  std::shared_ptr<InstructionSequence> cur_hl_iseq(hl_iseq);
+std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_ptr<InstructionSequence> &cur_hl_iseq) {
+  Node *funcdef_ast = cur_hl_iseq->get_funcdef_ast();
 
   // Global callee-saved register assignment
   GlobalCalleeSavedRegAssignment global_assigner;

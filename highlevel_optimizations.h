@@ -17,7 +17,7 @@ class HighLevelOptimizer {
     HighLevelOptimizer();
     ~HighLevelOptimizer();
 
-    std::shared_ptr<InstructionSequence> optimize(std::shared_ptr<InstructionSequence> &hl_iseq);
+    std::shared_ptr<InstructionSequence> optimize(std::shared_ptr<InstructionSequence> &cur_hl_iseq);
 };
 
 /**
