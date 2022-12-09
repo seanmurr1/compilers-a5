@@ -24,10 +24,10 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   for (int i = 0; i < num_iterations; i++) {
     // Constant propagation
     ConstantPropagation constant_prop(cfg);
-    //cfg = constant_prop.transform_cfg();
+    cfg = constant_prop.transform_cfg();
     // LVN
     LocalValueNumbering lvn(cfg);
-    cfg = lvn.transform_cfg();
+    //cfg = lvn.transform_cfg();
     // Copy propagation
     CopyPropagation copy_prop(cfg);
     //cfg = copy_prop.transform_cfg();
@@ -364,33 +364,38 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
   int reg = dest.get_base_reg();
 
   if (match_hl(HINS_localaddr, opcode)) {
-    constants_map.erase(reg);
+    constants_map.erase(dest);
+    constants_map.erase(dest.to_memref());
     result_iseq->append(orig_ins->duplicate());
   } else if (match_hl(HINS_mov_b, opcode)) {
-    if (orig_ins->get_operand(1).is_imm_ival()) 
+    if (orig_ins->get_operand(1).is_imm_ival()) {
       // Dest now tracks a constant: add to map
-      constants_map[reg] = orig_ins->get_operand(1).get_imm_ival();
-    else 
+      //constants_map[reg] = orig_ins->get_operand(1).get_imm_ival();
+      constants_map[dest] = orig_ins->get_operand(1).get_imm_ival();
+    } else {
       // Dest no longer tracks a constant: remove from map
-      constants_map.erase(reg);
+      //constants_map.erase(reg);
+      constants_map.erase(dest);
+      constants_map.erase(dest.to_memref());
+    }
     // Duplicate instruction
     result_iseq->append(orig_ins->duplicate());
   } else if (num_operands == 2) {
     Operand right = orig_ins->get_operand(1);
-    if (right.has_base_reg() && constants_map.count(right.get_base_reg()) == 1) 
+    if (right.has_base_reg() && constants_map.count(right) == 1) 
       // We have a constant stored
-      right = Operand(Operand::IMM_IVAL, constants_map[right.get_base_reg()]);
+      right = Operand(Operand::IMM_IVAL, constants_map[right]);
     result_iseq->append(new Instruction(opcode, dest, right));
   } else if (num_operands == 3) {
     Operand left = orig_ins->get_operand(1);
     Operand right = orig_ins->get_operand(2);
     // Check if we have a stored constant for operands
-    if (right.has_base_reg() && constants_map.count(right.get_base_reg()) == 1) 
+    if (right.has_base_reg() && constants_map.count(right) == 1) 
       // We have a constant stored
-      right = Operand(Operand::IMM_IVAL, constants_map[right.get_base_reg()]);
-    if (left.has_base_reg() && constants_map.count(left.get_base_reg()) == 1) 
+      right = Operand(Operand::IMM_IVAL, constants_map[right]);
+    if (left.has_base_reg() && constants_map.count(left) == 1) 
       // We have a constant stored
-      left = Operand(Operand::IMM_IVAL, constants_map[left.get_base_reg()]);
+      left = Operand(Operand::IMM_IVAL, constants_map[left]);
     result_iseq->append(new Instruction(opcode, dest, left, right));
   }
 }
