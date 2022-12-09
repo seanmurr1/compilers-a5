@@ -14,7 +14,7 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
 
   // Global callee-saved register assignment
   GlobalCalleeSavedRegAssignment global_assigner;
-  cur_hl_iseq = global_assigner.optimize(cur_hl_iseq);
+  //cur_hl_iseq = global_assigner.optimize(cur_hl_iseq);
 
   // Build CFG
   HighLevelControlFlowGraphBuilder hl_cfg_builder(cur_hl_iseq);
@@ -24,24 +24,24 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   for (int i = 0; i < num_iterations; i++) {
     // Constant propagation
     ConstantPropagation constant_prop(cfg);
-    cfg = constant_prop.transform_cfg();
+    //cfg = constant_prop.transform_cfg();
     // LVN
     LocalValueNumbering lvn(cfg);
-    cfg = lvn.transform_cfg();
+    //cfg = lvn.transform_cfg();
     // Copy propagation
     CopyPropagation copy_prop(cfg);
-    cfg = copy_prop.transform_cfg();
+    //cfg = copy_prop.transform_cfg();
     // Dead store elimination
     DeadStoreElimination dead_elim(cfg);
-    cfg = dead_elim.transform_cfg();
+    //cfg = dead_elim.transform_cfg();
   }
 
   // Local register allocation
   LocalRegisterAllocation local_assigner(cfg);
-  //cfg = local_assigner.transform_cfg();
-  //int num_reg_spilled = local_assigner.get_num_reg_spilled();
-  //printf("Num reg spilled: %d\n", num_reg_spilled);
-  //funcdef_ast->set_max_temp_vreg(num_reg_spilled + 9);
+  cfg = local_assigner.transform_cfg();
+  int num_reg_spilled = local_assigner.get_num_reg_spilled();
+  printf("Num reg spilled: %d\n", num_reg_spilled);
+  funcdef_ast->set_max_temp_vreg(num_reg_spilled + 9);
 
   // Convert transformed high-level CFG back into iseq
   cur_hl_iseq = cfg->create_instruction_sequence();
@@ -649,8 +649,8 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
     std::vector<Operand> new_ops(num_operands);
 
     // Operands mapped in this given instruction
-    int ops_mapped = 0;
     currently_mapped.clear();
+    int ops_mapped = 0;
 
     for (int i = 0; i < num_operands; i++) {
       Operand op = orig_ins->get_operand(i);
@@ -669,6 +669,8 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       if (local_reg_map.count(reg) == 0) 
         allocate_and_assign_register(result_iseq, op, i == 0);
       
+      printf("Mapped local reg: %d\n", local_reg_map[reg]);
+
       new_ops[i] = Operand(op.get_kind(), local_reg_map[reg]); // TODO: should this just be Operand::VREG? for kind...
       currently_mapped.insert(reg);
       ops_mapped++;
@@ -700,6 +702,7 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
   // Perform local register allocation
   local_allocation(orig_bb, result_iseq);
 
+  printf("After block: max num reg spilled:  %d\n", spill_locations.size());
   if (spill_locations.size() > max_reg_spilled)
     max_reg_spilled = spill_locations.size();
 
@@ -711,7 +714,7 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
  **/
 int LocalRegisterAllocation::allocate_register(std::shared_ptr<InstructionSequence> &result_iseq) {
   int to_spill = reverse_map[cur_local_reg_idx];
-  while (to_spill != -1 || currently_mapped.count(to_spill) == 1) {
+  while (to_spill != -1 && currently_mapped.count(to_spill) == 1) {
     cur_local_reg_idx = (cur_local_reg_idx + 1) % num_local_regs;
     to_spill = reverse_map[cur_local_reg_idx];
   }
