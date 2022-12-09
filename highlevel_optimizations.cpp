@@ -347,6 +347,31 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
   return result_iseq;
 }
 
+/**
+ * Adds a new instruction to result instruction sequence,
+ * where the number of passed operands is variable.
+ **/
+void add_variable_length_ins(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq, std::vector<Operand> &new_ops) {
+  HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
+  int num_operands = orig_ins->get_num_operands();
+  switch (num_operands) {
+    case 0:
+      result_iseq->append(new Instruction(opcode));
+      break;
+    case 1: 
+      result_iseq->append(new Instruction(opcode, new_ops[0]));
+      break;
+    case 2:
+      result_iseq->append(new Instruction(opcode, new_ops[0], new_ops[1]));
+      break;
+    case 3:
+      result_iseq->append(new Instruction(opcode, new_ops[0], new_ops[1], new_ops[2]));
+      break;
+    default:
+      break;
+  }
+}
+
 /*************** CONSTANT PROPAGATION ****************/
 ConstantPropagation::ConstantPropagation(const std::shared_ptr<ControlFlowGraph> &cfg)
   : ControlFlowGraphTransform(cfg)
@@ -432,31 +457,6 @@ std::shared_ptr<InstructionSequence> ConstantPropagation::transform_basic_block(
       result_iseq->append(orig_ins->duplicate());
   }
   return result_iseq;
-}
-
-/**
- * Adds a new instruction to result instruction sequence,
- * where the number of passed operands is variable.
- **/
-void add_variable_length_ins(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq, std::vector<Operand> &new_ops) {
-  HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
-  int num_operands = orig_ins->get_num_operands();
-  switch (num_operands) {
-    case 0:
-      result_iseq->append(new Instruction(opcode));
-      break;
-    case 1: 
-      result_iseq->append(new Instruction(opcode, new_ops[0]));
-      break;
-    case 2:
-      result_iseq->append(new Instruction(opcode, new_ops[0], new_ops[1]));
-      break;
-    case 3:
-      result_iseq->append(new Instruction(opcode, new_ops[0], new_ops[1], new_ops[2]));
-      break;
-    default:
-      break;
-  }
 }
 
 /*************** COPY PROPAGATION ****************/
