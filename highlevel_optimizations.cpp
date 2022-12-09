@@ -351,7 +351,7 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
   // Algebraic identities
   if (check_algebraic_identities(result_iseq, orig_ins))
     return;   
-
+  printf("Key before: (%d, %d)\n", left.get_base_reg(), right.get_base_reg());
   HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();   
   std::vector<Operand> right_side(2);
   right_side[0] = left;
@@ -361,6 +361,7 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
   if (is_commutative(opcode)) 
     fix_commutativity(right_side);
 
+  printf("Key after: (%d, %d)\n", left.get_base_reg(), right.get_base_reg());
   // Local Value Numbering
   left = right_side[0];
   right = right_side[1];
