@@ -34,6 +34,14 @@ class DeadStoreElimination : public ControlFlowGraphTransform {
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
 };
 
+// Used to hash Operand objects.
+class OperandHasher {
+  public:
+    size_t operator()(const Operand &o) const {
+      return o.hash(); 
+    }
+};
+
 /**
  * Simplify representation of some binary operators.
  **/
@@ -68,6 +76,12 @@ class LocalValueNumbering : public ControlFlowGraphTransform {
       bool operator==(const LVN_key &other) const {
         return (left == other.left && right == other.right && op == other.op);
       }
+      bool operator<(const LVN_key &other) const {
+        return left < other.left || right < other.right || op < other.op;
+      }
+      bool contains(const Operand &op) const {
+        return left == op || right == op;
+      }
     };
 
     class LVN_hasher {
@@ -79,24 +93,23 @@ class LocalValueNumbering : public ControlFlowGraphTransform {
         }
     };
 
+    // Map LVN key to Operand/VREG
     std::unordered_map<LVN_key, Operand, LVN_hasher> lvn_map;
+    // Pseudo-reverse mappings of above
+    std::unordered_map<Operand, std::set<LVN_key>, OperandHasher> reverse_map;
 
     void constant_fold(std::shared_ptr<InstructionSequence> &result_iseq, Instruction *orig_ins);
     bool check_algebraic_identities(std::shared_ptr<InstructionSequence> &result_iseq, Instruction *orig_ins);
+    void fix_commutativity(std::vector<Operand> &right_side);
+    void process_definition(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq);
+
+    void invalidate_mappings(Operand op);
 
   public:
     LocalValueNumbering(const std::shared_ptr<ControlFlowGraph> &cfg);
     ~LocalValueNumbering();
 
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
-};
-
-// Used to hash Operand objects.
-class OperandHasher {
-  public:
-    size_t operator()(const Operand &o) const {
-      return o.hash(); 
-    }
 };
 
 /**

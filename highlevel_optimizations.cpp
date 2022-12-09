@@ -106,36 +106,37 @@ bool match_hl(int base, int hl_opcode) {
 
 /**
  * Gets shift from 'b' variant of a HL opcode.
+ * Convert to mov opcode.
  **/
-int get_opcode_offset(HighLevelOpcode opcode) {
-
+HighLevelOpcode get_mov_opcode(HighLevelOpcode opcode) {
+  int mov_shift = 0;
   if (match_hl(HINS_add_b, opcode)) 
-    return opcode - HINS_add_b;
+    mov_shift = opcode - HINS_add_b;
   else if (match_hl(HINS_sub_b, opcode)) 
-    return opcode - HINS_sub_b;
+    mov_shift = opcode - HINS_sub_b;
   else if (match_hl(HINS_mul_b, opcode)) 
-    return opcode - HINS_mul_b;
+    mov_shift = opcode - HINS_mul_b;
   else if (match_hl(HINS_div_b, opcode)) 
-    return opcode - HINS_div_b;
+    mov_shift = opcode - HINS_div_b;
   else if (match_hl(HINS_mod_b, opcode)) 
-    return opcode - HINS_mod_b;
+    mov_shift = opcode - HINS_mod_b;
   else if (match_hl(HINS_cmplt_b, opcode)) 
-    return opcode - HINS_cmplt_b;
+    mov_shift = opcode - HINS_cmplt_b;
   else if (match_hl(HINS_cmplte_b, opcode)) 
-    return opcode - HINS_cmplte_b;
+    mov_shift = opcode - HINS_cmplte_b;
   else if (match_hl(HINS_cmpgt_b, opcode)) 
-    return opcode - HINS_cmpgt_b;
+    mov_shift = opcode - HINS_cmpgt_b;
   else if (match_hl(HINS_cmpgte_b, opcode)) 
-    return opcode - HINS_cmpgte_b;
+    mov_shift = opcode - HINS_cmpgte_b;
   else if (match_hl(HINS_cmpeq_b, opcode)) 
-    return opcode - HINS_cmpeq_b;
+    mov_shift = opcode - HINS_cmpeq_b;
   else if (match_hl(HINS_cmpneq_b, opcode)) 
-    return opcode - HINS_cmpneq_b;
+    mov_shift = opcode - HINS_cmpneq_b;
   else 
     assert(false);
 
   // TODO: add more variants to check
-  return 0;
+  return (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
 }
 
 /**
@@ -178,7 +179,6 @@ void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> &re
   Operand dest = orig_ins->get_operand(0);
   int left = orig_ins->get_operand(1).get_imm_ival();
   int right = orig_ins->get_operand(2).get_imm_ival();
-  int mov_shift = get_opcode_offset(opcode);
   Operator op = get_operator(opcode);
   int result;
 
@@ -220,7 +220,7 @@ void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> &re
       break;
   }
 
-  HighLevelOpcode mov_opcode = (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
+  HighLevelOpcode mov_opcode = get_mov_opcode(opcode);
   result_iseq->append(new Instruction(mov_opcode, dest, Operand(Operand::IMM_IVAL, result)));
 }
 
@@ -235,9 +235,8 @@ bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<Instruction
   Operand left = orig_ins->get_operand(1);
   Operand right = orig_ins->get_operand(2);
 
-  int mov_shift = get_opcode_offset(opcode);
   Operator op = get_operator(opcode);
-  HighLevelOpcode mov_opcode = (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
+  HighLevelOpcode mov_opcode = get_mov_opcode(opcode);
 
   if (op == Operator::ADD) {
     // Identity: add zero
@@ -292,12 +291,112 @@ bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<Instruction
   return false;
 }
 
+// Checks if an opcode represents a commutative operation.
+bool is_commutative(HighLevelOpcode opcode) {
+  return match_hl(HINS_add_b, opcode)
+      || match_hl(HINS_mul_b, opcode)
+      || match_hl(HINS_cmpeq_b, opcode)
+      || match_hl(HINS_cmpneq_b, opcode);
+}
+
+void LocalValueNumbering::invalidate_mappings(Operand op) {
+  if (reverse_map.count(op) == 1) {
+    // Invalidate previous bindings
+    std::set<LVN_key> &reverse_mappings = reverse_map[op];
+    for (auto key : reverse_mappings) {
+      if (lvn_map.count(key) == 0)
+        continue;
+      if (!key.contains(op) && !(lvn_map[key] == op))
+        continue;
+      lvn_map.erase(key);
+    }
+    reverse_map.erase(op);
+  }
+}
+
+void LocalValueNumbering::fix_commutativity(std::vector<Operand> &right_side) {
+  bool swap = false;
+  if (right_side[0].has_base_reg() && right_side[1].has_base_reg())
+    if (right_side[1] < right_side[0]) 
+      swap = true;
+  else if (right_side[1].has_base_reg())
+    swap = true;
+  if (swap) {
+    Operand temp = right_side[1];
+    right_side[1] = right_side[0];
+    right_side[0];
+  }
+}
+
+void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq) {
+  // For now assume num_operands = 3 (maybe deal with unary expressions later)
+  unsigned num_operands = orig_ins->get_num_operands();
+  Operand dest = orig_ins->get_operand(0);
+  // need to invalidate for dest regardless
+  invalidate_mappings(dest);
+
+  if (num_operands < 3) {
+    result_iseq->append(orig_ins->duplicate());
+    return;
+  }
+
+  Operand left = orig_ins->get_operand(1);
+  Operand right = orig_ins->get_operand(2);
+
+  // Constant folding
+  if (left.is_imm_ival() && right.is_imm_ival()) {
+    constant_fold(result_iseq, orig_ins);
+    return;
+  }
+  // Algebraic identities
+  if (check_algebraic_identities(result_iseq, orig_ins))
+    return;   
+
+  HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();   
+  std::vector<Operand> right_side(2);
+  right_side[0] = left;
+  right_side[1] = right;
+
+  // Fix commutativity
+  if (is_commutative(opcode)) 
+    fix_commutativity(right_side);
+
+  // Local Value Numbering
+  left = right_side[0];
+  right = right_side[1];
+
+  Operator op = get_operator(opcode); // TODO: maybe just use HighLevelOpcode to hash
+                                      // bc of sizing and all
+  // Create hash key
+  LVN_key key(left, right, op);
+
+  if (lvn_map.count(key) == 0) {
+    // Key not present: append original instruction
+    result_iseq->append(orig_ins->duplicate());
+  } else {
+    // Key present: replace instruction with copy
+    Operand to_copy = lvn_map[key];
+    HighLevelOpcode mov_opcode = get_mov_opcode(opcode);
+    if (!(dest == to_copy))
+      result_iseq->append(new Instruction(mov_opcode, dest, to_copy));
+  }
+
+  // Update maps
+  lvn_map[key] = dest;
+  reverse_map[dest].insert(key); 
+  if (left.has_base_reg())
+    reverse_map[left].insert(key);
+  if (right.has_base_reg())
+    reverse_map[right].insert(key);     
+}
+
 /**
  * Apply LVN to a single block.
  **/
 std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(const InstructionSequence *orig_bb) {
   // Clear map first
   lvn_map.clear();
+  reverse_map.clear();
 
   std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
 
@@ -305,49 +404,7 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
     Instruction *orig_ins = *i;
 
     if (HighLevel::is_def(orig_ins)) {
-      // For now assume num_operands = 3 (maybe deal with unary expressions later)
-      unsigned num_operands = orig_ins->get_num_operands();
-      if (num_operands < 3) {
-        result_iseq->append(orig_ins->duplicate());
-        continue;
-      }
-
-      Operand dest = orig_ins->get_operand(0);
-      Operand left = orig_ins->get_operand(1);
-      Operand right = orig_ins->get_operand(2);
-
-      // Constant folding
-      if (left.is_imm_ival() && right.is_imm_ival()) {
-        constant_fold(result_iseq, orig_ins);
-        continue;
-      }
-      // Algebraic identities
-      if (check_algebraic_identities(result_iseq, orig_ins))
-        continue;      
-
-      // TODO commutativity?
-
-      // Local Value Numbering
-      HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
-      Operator op = get_operator(opcode);
-      // Create hash key
-      LVN_key key(left, right, op);
-
-      if (lvn_map.count(key) == 0) {
-        // Key not present: append original instruction
-        result_iseq->append(orig_ins->duplicate());
-      } else {
-        // Key present: replace instruction with copy
-        Operand to_copy = lvn_map[key];
-        int mov_shift = get_opcode_offset(opcode);
-        HighLevelOpcode mov_opcode = (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
-
-        // TODO: ADDED
-        if (!(dest == to_copy))
-          result_iseq->append(new Instruction(mov_opcode, dest, to_copy));
-      }
-      // Update map
-      lvn_map[key] = dest;
+      process_definition(orig_ins, result_iseq);
     } else {
       result_iseq->append(orig_ins->duplicate());
     }
@@ -523,6 +580,7 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
 std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(const InstructionSequence *orig_bb) {
   // Clear map first
   copy_map.clear();
+  reverse_map.clear();
 
   std::shared_ptr<InstructionSequence> result_iseq(new InstructionSequence());
 
