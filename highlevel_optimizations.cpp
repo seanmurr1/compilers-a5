@@ -39,7 +39,6 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   LocalRegisterAllocation local_assigner(cfg);
   cfg = local_assigner.transform_cfg();
   int num_reg_spilled = local_assigner.get_num_reg_spilled();
-  printf("Num reg spilled: %d\n", num_reg_spilled);
   funcdef_ast->set_max_temp_vreg(num_reg_spilled + 9);
 
   // Convert transformed high-level CFG back into iseq
@@ -690,6 +689,8 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
   // Process vregs in block
   int last_arg_reg_used = process_registers(orig_bb);
 
+  printf("last arg reg used: %d\n", last_arg_reg_used);
+
   // VREG # of first local reg to allocate
   int starting_local_reg = last_arg_reg_used + 1;
   int num_local_regs = 7 - starting_local_reg;
@@ -698,10 +699,10 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
   for (int i = 0; i < num_local_regs; i++)
     reverse_map[i] = -1;
 
+  printf("startign local reg: %d\n", start_local_reg);
   // Perform local register allocation
   local_allocation(orig_bb, result_iseq);
 
-  printf("After block: max num reg spilled:  %d\n", spill_locations.size());
   if (spill_locations.size() > max_reg_spilled)
     max_reg_spilled = spill_locations.size();
 
