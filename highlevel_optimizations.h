@@ -20,6 +20,9 @@ class HighLevelOptimizer {
     std::shared_ptr<InstructionSequence> optimize(std::shared_ptr<InstructionSequence> &hl_iseq);
 };
 
+/**
+ * Dead store elimination optimization.
+ **/
 class DeadStoreElimination : public ControlFlowGraphTransform {
   private:
     LiveVregs m_live_vregs;
@@ -88,7 +91,7 @@ class LocalValueNumbering : public ControlFlowGraphTransform {
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
 };
 
-// Used to hash on Operand objects
+// Used to hash Operand objects.
 class OperandHasher {
   public:
     size_t operator()(const Operand &o) const {
@@ -117,9 +120,9 @@ class ConstantPropagation : public ControlFlowGraphTransform {
  **/
 class CopyPropagation : public ControlFlowGraphTransform {
   private:
-    // Map VREG # to VREG # to copy
+    // Map VREG to VREG to copy
     std::unordered_map<Operand, Operand, OperandHasher> copy_map;
-
+    // Reverse mappings of above
     std::unordered_map<Operand, std::set<Operand>, OperandHasher> reverse_map;
 
   public:

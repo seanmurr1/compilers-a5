@@ -30,10 +30,10 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
     //cfg = lvn.transform_cfg();
     // Copy propagation
     CopyPropagation copy_prop(cfg);
-    //cfg = copy_prop.transform_cfg();
+    cfg = copy_prop.transform_cfg();
     // Dead store elimination
     DeadStoreElimination dead_elim(cfg);
-    //cfg = dead_elim.transform_cfg();
+    cfg = dead_elim.transform_cfg();
   }
 
   // Local register allocation
@@ -55,9 +55,11 @@ DeadStoreElimination::DeadStoreElimination(const std::shared_ptr<ControlFlowGrap
     m_live_vregs.execute();
 }
 
-/*************** DEAD STORE ELIMINATION ****************/
 DeadStoreElimination::~DeadStoreElimination() { }
 
+/**
+ * Perform dead store elimination on single block.
+ **/
 std::shared_ptr<InstructionSequence> DeadStoreElimination::transform_basic_block(const InstructionSequence *orig_bb) {
   // LiveVregs needs a pointer to a BasicBlock object to get a dataflow fact for that basic block
   const BasicBlock *orig_bb_as_basic_block = static_cast<const BasicBlock *>(orig_bb);
@@ -415,25 +417,6 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
     }
     add_variable_length_ins(orig_ins, result_iseq, new_ops);
   } 
-  
-  // else if (num_operands == 2) {
-  //   Operand right = orig_ins->get_operand(1);
-  //   if (right.has_base_reg() && constants_map.count(right) == 1) 
-  //     // We have a constant stored
-  //     right = Operand(Operand::IMM_IVAL, constants_map[right]);
-  //   result_iseq->append(new Instruction(opcode, dest, right));
-  // } else if (num_operands == 3) {
-  //   Operand left = orig_ins->get_operand(1);
-  //   Operand right = orig_ins->get_operand(2);
-  //   // Check if we have a stored constant for operands
-  //   if (right.has_base_reg() && constants_map.count(right) == 1) 
-  //     // We have a constant stored
-  //     right = Operand(Operand::IMM_IVAL, constants_map[right]);
-  //   if (left.has_base_reg() && constants_map.count(left) == 1) 
-  //     // We have a constant stored
-  //     left = Operand(Operand::IMM_IVAL, constants_map[left]);
-  //   result_iseq->append(new Instruction(opcode, dest, left, right));
-  // }
 }
 
 /**
