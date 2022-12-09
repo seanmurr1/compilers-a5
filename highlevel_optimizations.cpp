@@ -361,10 +361,10 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
   if (is_commutative(opcode)) 
     fix_commutativity(right_side);
 
-  printf("Key after: (%d, %d)\n", left.get_base_reg(), right.get_base_reg());
   // Local Value Numbering
   left = right_side[0];
   right = right_side[1];
+  printf("Key after: (%d, %d)\n", left.get_base_reg(), right.get_base_reg());
 
   Operator op = get_operator(opcode); // TODO: maybe just use HighLevelOpcode to hash
                                       // bc of sizing and all
