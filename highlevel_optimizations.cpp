@@ -383,6 +383,7 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
 
   // Update maps
   lvn_map[key] = dest;
+  printf("(%d, %d) mapped to %d\n", left.get_base_reg(), right.get_base_reg(), dest.get_base_reg());
   reverse_map[dest].insert(key); 
   if (left.has_base_reg())
     reverse_map[left].insert(key);
