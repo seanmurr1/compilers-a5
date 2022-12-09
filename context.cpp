@@ -186,7 +186,7 @@ void Context::highlevel_codegen(ModuleCollector *module_collector) {
 
       // TODO
       HighLevelOptimizer hl_optimizer;
-      hl_iseq = hl_optimizer.optimize(hl_iseq);
+      //hl_iseq = hl_optimizer.optimize(hl_iseq);
       //////////////////////////////////////////////////////
 
       // store a pointer to the function definition AST in the
