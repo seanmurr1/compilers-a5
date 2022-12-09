@@ -457,6 +457,12 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
   unsigned num_operands = orig_ins->get_num_operands();
   Operand dest = orig_ins->get_operand(0);
   int reg = dest.get_base_reg();
+
+  std::set<int> &reverse_mappings = reverse_map[reg];
+  for (auto i : reverse_mappings) 
+    if (copy_map[i] == reg)
+      copy_map.erase(i);
+  reverse_mappings.clear();
   
   if (match_hl(HINS_localaddr, opcode)) {
     copy_map.erase(reg);
@@ -465,9 +471,12 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     if (orig_ins->get_operand(1).is_imm_ival()) 
       // Dest no longer tracks a vreg to copy: remove from map
       copy_map.erase(reg);
-    else 
+    else {
       // Dest tracks vreg to copy into: add to map
-      copy_map[reg] = orig_ins->get_operand(1).get_base_reg();
+      int copy_reg = orig_ins->get_operand(1).get_base_reg();
+      copy_map[reg] = copy_reg;
+      reverse_map[copy_reg].insert(reg);
+    }
     // Duplicate instruction
     result_iseq->append(orig_ins->duplicate());
   } else if (num_operands == 2) {

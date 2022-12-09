@@ -120,6 +120,8 @@ class CopyPropagation : public ControlFlowGraphTransform {
     // Map VREG # to VREG # to copy
     std::unordered_map<int, int> copy_map;
 
+    std::unordered_map<int, std::set<int>> reverse_map;
+
   public:
     CopyPropagation(const std::shared_ptr<ControlFlowGraph> &cfg);
     ~CopyPropagation();
