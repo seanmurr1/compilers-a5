@@ -627,6 +627,9 @@ int LocalRegisterAllocation::process_registers(const InstructionSequence *orig_b
   int last_arg_reg_used = 0;
   for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
     Instruction *orig_ins = *i;
+    if (match_hl(HINS_div_b, orig_ins->get_opcode()))
+      last_arg_reg_used = 3;
+
     int num_operands = orig_ins->get_num_operands();
     for (int i = 0; i < num_operands; i++) {
       Operand op = orig_ins->get_operand(i);
