@@ -192,7 +192,7 @@ void Context::highlevel_codegen(ModuleCollector *module_collector) {
 
       // TODO
       HighLevelOptimizer hl_optimizer;
-      //hl_iseq = hl_optimizer.optimize(hl_iseq);
+      hl_iseq = hl_optimizer.optimize(hl_iseq);
       //////////////////////////////////////////////////////
 
       module_collector->collect_function(fn_name, hl_iseq);
