@@ -19,7 +19,7 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   HighLevelControlFlowGraphBuilder hl_cfg_builder(cur_hl_iseq);
   std::shared_ptr<ControlFlowGraph> cfg = hl_cfg_builder.build();
 
-  int num_iterations = 3;
+  int num_iterations = 2;
   for (int i = 0; i < num_iterations; i++) {
     // Constant propagation
     ConstantPropagation constant_prop(cfg);
@@ -40,6 +40,21 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   cfg = local_assigner.transform_cfg();
   int num_reg_spilled = local_assigner.get_num_reg_spilled();
   funcdef_ast->set_max_temp_vreg(num_reg_spilled + 9);
+
+  for (int i = 0; i < num_iterations; i++) {
+    // Constant propagation
+    ConstantPropagation constant_prop(cfg);
+    cfg = constant_prop.transform_cfg();
+    // LVN
+    LocalValueNumbering lvn(cfg);
+    cfg = lvn.transform_cfg();
+    // Copy propagation
+    CopyPropagation copy_prop(cfg);
+    cfg = copy_prop.transform_cfg();
+    // Dead store elimination
+    DeadStoreElimination dead_elim(cfg);
+    cfg = dead_elim.transform_cfg();
+  }
 
   // Convert transformed high-level CFG back into iseq
   cur_hl_iseq = cfg->create_instruction_sequence();
