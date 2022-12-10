@@ -41,21 +41,6 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   int num_reg_spilled = local_assigner.get_num_reg_spilled();
   funcdef_ast->set_max_temp_vreg(num_reg_spilled + 9);
 
-  for (int i = 0; i < num_iterations; i++) {
-    // Constant propagation
-    ConstantPropagation constant_prop(cfg);
-    cfg = constant_prop.transform_cfg();
-    // LVN
-    LocalValueNumbering lvn(cfg);
-    cfg = lvn.transform_cfg();
-    // Copy propagation
-    CopyPropagation copy_prop(cfg);
-    cfg = copy_prop.transform_cfg();
-    // Dead store elimination
-    DeadStoreElimination dead_elim(cfg);
-    cfg = dead_elim.transform_cfg();
-  }
-
   // Convert transformed high-level CFG back into iseq
   cur_hl_iseq = cfg->create_instruction_sequence();
   // Function def AST might have info needed for low-level code generation
