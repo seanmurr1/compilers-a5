@@ -467,19 +467,25 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
     constants_map.erase(dest.to_memref());
     result_iseq->append(orig_ins->duplicate());
   } else if (match_hl(HINS_mov_b, opcode)) {
-    if (orig_ins->get_operand(1).is_imm_ival()) {
+    Operand src = orig_ins->get_operand(1);
+    if (src.is_imm_ival()) {
       // Dest now tracks a constant: add to map
-      constants_map[dest] = orig_ins->get_operand(1).get_imm_ival();
-      printf("vr%d now tracks constant: %d\n", reg, orig_ins->get_operand(1).get_imm_ival());
+      constants_map[dest] = src.get_imm_ival();
+      //printf("vr%d now tracks constant: %d\n", reg, orig_ins->get_operand(1).get_imm_ival());
     } else {
       // Dest no longer tracks a constant: remove from map
       constants_map.erase(dest);
       constants_map.erase(dest.to_memref());
-      printf("vr%d no longer tracks\n", reg);
+      //printf("vr%d no longer tracks\n", reg);
+      // Check second value
+      if (constants_map.count(src) == 1) 
+        src = Operand(Operand::IMM_IVAL, constants_map[src]);
     }
-    // Duplicate instruction
-    result_iseq->append(orig_ins->duplicate());
+    result_iseq->append(new Instruction(opcode, dest, src));
   } else {
+    // Dest no longer tracks a constant: remove from map
+    constants_map.erase(dest);
+    constants_map.erase(dest.to_memref());
     std::vector<Operand> new_ops(num_operands);
     new_ops[0] = dest;
     for (int i = 1; i < num_operands; i++) {
@@ -487,7 +493,7 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
       if (op.has_base_reg() && constants_map.count(op) == 1) {
         // We have a copy stored
         op = Operand(Operand::IMM_IVAL, constants_map[op]);
-        printf("Using %d in place of vr%d\n", constants_map[op], op.get_base_reg());
+        //printf("Using %d in place of vr%d\n", constants_map[op], op.get_base_reg());
       }        
       new_ops[i] = op;
     }
