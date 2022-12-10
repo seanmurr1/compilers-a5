@@ -4,6 +4,7 @@
 #include "cfg_transform.h"
 #include "live_vregs.h"
 #include "lowlevel.h"
+#include "highlevel.h"
 
 #include <unordered_map>
 #include <set>
