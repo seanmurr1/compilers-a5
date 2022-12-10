@@ -189,8 +189,10 @@ void Context::highlevel_codegen(ModuleCollector *module_collector) {
       // code generator
       hl_iseq->set_funcdef_ast(child);
 
+      /////////////////////////////////////
       HighLevelOptimizer opt;
-      hl_iseq = opt.optimize(hl_iseq);
+      //hl_iseq = opt.optimize(hl_iseq);
+      // TODO
 
       module_collector->collect_function(fn_name, hl_iseq);
 
