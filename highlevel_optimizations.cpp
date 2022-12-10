@@ -660,6 +660,7 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       int reg = op.get_base_reg();
       if (do_not_map.count(reg) == 1 || reg <= 6) {
         new_ops[i] = op;
+        printf("Not mapping reg\n");
         continue;
       }
 
