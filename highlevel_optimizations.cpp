@@ -664,12 +664,13 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       }
 
       // Allocate local reg if not assigned or currently spilled
-      if (local_reg_map.count(reg) == 0) 
+      if (local_reg_map.count(reg) == 0) {
         allocate_and_assign_register(result_iseq, op, i == 0);
+        printf("%d mapped to %d\n", reg, local_reg_map[reg]);
+      }
       
       new_ops[i] = Operand(op.get_kind(), local_reg_map[reg]); // TODO: should this just be Operand::VREG? for kind...
 
-      printf("%d mapped to %d\n", reg, local_reg_map[reg]);
 
       currently_mapped.insert(reg);
       ops_mapped++;
