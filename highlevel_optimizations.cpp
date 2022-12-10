@@ -132,8 +132,10 @@ HighLevelOpcode get_mov_opcode(HighLevelOpcode opcode) {
     mov_shift = opcode - HINS_cmpneq_b;
   else if (match_hl(HINS_mov_b, opcode))
     mov_shift = opcode - HINS_mov_b;
-  else
+  else {
+    printf("Failing opcode: %\n", opcode);
     assert(false);
+  }
 
   // TODO: add more variants to check
   return (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
