@@ -134,11 +134,8 @@ HighLevelOpcode get_mov_opcode(HighLevelOpcode opcode) {
     mov_shift = opcode - HINS_mov_b;
   else {
     mov_shift = 3;
-    //printf("Failing opcode: %d\n", opcode);
-    //assert(false);
   }
 
-  // TODO: add more variants to check
   return (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
 }
 
@@ -627,7 +624,8 @@ int LocalRegisterAllocation::process_registers(const InstructionSequence *orig_b
   int last_arg_reg_used = 0;
   for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
     Instruction *orig_ins = *i;
-    if (match_hl(HINS_div_b, orig_ins->get_opcode()))
+    HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
+    if (match_hl(HINS_div_b, opcode) || match_hl(HINS_mod_b, opcode))
       last_arg_reg_used = 3;
 
     int num_operands = orig_ins->get_num_operands();
@@ -667,14 +665,12 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       Operand op = orig_ins->get_operand(i);
       if (!op.has_base_reg() || ops_mapped >= num_local_regs) {
         new_ops[i] = op;
-        //printf("Not mapping non-reg\n");
         continue;
       }
 
       int reg = op.get_base_reg();
       if (do_not_map.count(reg) == 1 || reg <= 6) {
         new_ops[i] = op;
-        //printf("Not mapping reg %d\n", reg);
         continue;
       }
 
@@ -682,17 +678,14 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       if (local_reg_map.count(reg) == 0) {
         HighLevelOpcode mov_opcode = get_mov_opcode((HighLevelOpcode) orig_ins->get_opcode());
         allocate_and_assign_register(result_iseq, op, i == 0, mov_opcode);
-        //printf("%d mapped to %d\n", reg, local_reg_map[reg]);
       }
       
       new_ops[i] = Operand(op.get_kind(), local_reg_map[reg]); // TODO: should this just be Operand::VREG? for kind...
-      //printf("Use %d in place of %d\n", local_reg_map[reg], reg);
 
       currently_mapped.insert(reg);
       ops_mapped++;
     }  
     add_variable_length_ins(orig_ins, result_iseq, new_ops);
-    //printf("\n");
   }
 }
 
@@ -720,16 +713,6 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
     first_spill_reg = 10;
   else 
     first_spill_reg = max_reg_to_not_use + 1;
-
-
-  //printf("Do not map: {");
-  //for (auto i : do_not_map) 
-  //  printf("%d,", i);
-  //printf("}\n");
-
-  //printf("First spill reg: %d\n", first_spill_reg);
-  //printf("Start local reg: %d\n", start_local_reg);
-  
 
   // Perform local register allocation
   local_allocation(orig_bb, result_iseq);
