@@ -376,8 +376,6 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
   Operator op = get_operator(opcode);
   // Create hash key
   LVN_key key(left, right, op);
-
-  printf("adding key for (%d, %d)->%d\n", left.get_base_reg(), right.get_base_reg(), dest.get_base_reg());
   
   if (lvn_map.count(key) == 0) {
     // Key not present: append original instruction
