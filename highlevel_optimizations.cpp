@@ -681,7 +681,7 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       ops_mapped++;
     }  
     add_variable_length_ins(orig_ins, result_iseq, new_ops);
-    printf("\n");
+    //printf("\n");
   }
 }
 
