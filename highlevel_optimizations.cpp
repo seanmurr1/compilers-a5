@@ -699,7 +699,7 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
     reverse_map[i] = -1;
 
 
-  printf("Do not map: {")
+  printf("Do not map: {");
   for (auto i : do_not_map) 
     printf("%d,", i);
   printf("}\n");
