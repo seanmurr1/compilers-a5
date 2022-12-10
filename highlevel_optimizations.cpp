@@ -470,10 +470,12 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
     if (orig_ins->get_operand(1).is_imm_ival()) {
       // Dest now tracks a constant: add to map
       constants_map[dest] = orig_ins->get_operand(1).get_imm_ival();
+      printf("vr%d now tracks constant: %d\n", reg, orig_ins->get_operand(1).get_imm_ival());
     } else {
       // Dest no longer tracks a constant: remove from map
       constants_map.erase(dest);
       constants_map.erase(dest.to_memref());
+      printf("vr%d no longer tracks\n", reg);
     }
     // Duplicate instruction
     result_iseq->append(orig_ins->duplicate());
@@ -482,9 +484,11 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
     new_ops[0] = dest;
     for (int i = 1; i < num_operands; i++) {
       Operand op = orig_ins->get_operand(i);
-      if (op.has_base_reg() && constants_map.count(op) == 1)
+      if (op.has_base_reg() && constants_map.count(op) == 1) {
         // We have a copy stored
         op = Operand(Operand::IMM_IVAL, constants_map[op]);
+        printf("Using %d in place of vr%d\n", constants_map[op], op.get_base_reg());
+      }        
       new_ops[i] = op;
     }
     add_variable_length_ins(orig_ins, result_iseq, new_ops);
