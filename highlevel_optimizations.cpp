@@ -670,7 +670,7 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       }
       
       new_ops[i] = Operand(op.get_kind(), local_reg_map[reg]); // TODO: should this just be Operand::VREG? for kind...
-
+      printf("Use %d in place of %d\n", local_reg_map[reg], reg);
 
       currently_mapped.insert(reg);
       ops_mapped++;
