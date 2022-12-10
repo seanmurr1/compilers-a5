@@ -654,6 +654,7 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       Operand op = orig_ins->get_operand(i);
       if (!op.has_base_reg() || ops_mapped >= num_local_regs) {
         new_ops[i] = op;
+        printf("Not mapping non-reg\n")
         continue;
       }
 
@@ -677,6 +678,7 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       ops_mapped++;
     }  
     add_variable_length_ins(orig_ins, result_iseq, new_ops);
+    printf("\n");
   }
 }
 
