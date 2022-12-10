@@ -130,7 +130,9 @@ HighLevelOpcode get_mov_opcode(HighLevelOpcode opcode) {
     mov_shift = opcode - HINS_cmpeq_b;
   else if (match_hl(HINS_cmpneq_b, opcode)) 
     mov_shift = opcode - HINS_cmpneq_b;
-  else 
+  else if (match_hl(HINS_mov_b, opcode))
+    mov_shift = opcode - HINS_mov_b;
+  else
     assert(false);
 
   // TODO: add more variants to check
@@ -667,7 +669,8 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
 
       // Allocate local reg if not assigned or currently spilled
       if (local_reg_map.count(reg) == 0) {
-        allocate_and_assign_register(result_iseq, op, i == 0);
+        HighLevelOpcode mov_opcode = get_mov_opcode((HighLevelOpcode) orig_ins->get_opcode());
+        allocate_and_assign_register(result_iseq, op, i == 0, mov_opcode);
         printf("%d mapped to %d\n", reg, local_reg_map[reg]);
       }
       
@@ -721,7 +724,7 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
 /**
  * Allocate local register, spilling if needed.
  **/
-int LocalRegisterAllocation::allocate_register(std::shared_ptr<InstructionSequence> &result_iseq) {
+int LocalRegisterAllocation::allocate_register(std::shared_ptr<InstructionSequence> &result_iseq, HighLevelOpcode mov_opcode) {
   int to_spill = reverse_map[cur_local_reg_idx];
   while (to_spill != -1 && currently_mapped.count(to_spill) == 1) {
     cur_local_reg_idx = (cur_local_reg_idx + 1) % num_local_regs;
@@ -747,7 +750,9 @@ int LocalRegisterAllocation::allocate_register(std::shared_ptr<InstructionSequen
     // Spill register
     Operand spill_register(Operand::VREG, 10 + spill_index);
     Operand local_reg(Operand::VREG, local_reg_num);
-    result_iseq->append(new Instruction(HINS_mov_q, spill_register, local_reg));
+    //result_iseq->append(new Instruction(HINS_mov_q, spill_register, local_reg));
+    result_iseq->append(new Instruction(mov_opcode, spill_register, local_reg));
+    
     // Update tracking of spilled registers
     spilled_regs[to_spill] = spill_index;
     reverse_map[cur_local_reg_idx] = -1;
@@ -760,9 +765,9 @@ int LocalRegisterAllocation::allocate_register(std::shared_ptr<InstructionSequen
 /**
  * Allocates and assigns local register to operand.
  **/
-void LocalRegisterAllocation::allocate_and_assign_register(std::shared_ptr<InstructionSequence> &result_iseq, Operand op, bool def) {
+void LocalRegisterAllocation::allocate_and_assign_register(std::shared_ptr<InstructionSequence> &result_iseq, Operand op, bool def, HighLevelOpcode mov_opcode) {
   // Obtain local register
-  int local_reg_num = allocate_register(result_iseq);
+  int local_reg_num = allocate_register(result_iseq, mov_opcode);
 
   int reg = op.get_base_reg();
   if (!def) {
@@ -777,7 +782,9 @@ void LocalRegisterAllocation::allocate_and_assign_register(std::shared_ptr<Instr
       spilled_regs.erase(reg);
       spill_locations[spill_index] = false;
     }
-    result_iseq->append(new Instruction(HINS_mov_q, local_reg, prev_loc));
+
+    //result_iseq->append(new Instruction(HINS_mov_q, local_reg, prev_loc));
+    result_iseq->append(new Instruction(mov_opcode, local_reg, prev_loc));
   }
 
   local_reg_map[reg] = local_reg_num;

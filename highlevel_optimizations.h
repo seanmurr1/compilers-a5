@@ -176,8 +176,8 @@ class LocalRegisterAllocation : public ControlFlowGraphTransform {
 
     int process_registers(const InstructionSequence *orig_bb);
     void local_allocation(const InstructionSequence *orig_bb, std::shared_ptr<InstructionSequence> &result_iseq);
-    int allocate_register(std::shared_ptr<InstructionSequence> &result_iseq);
-    void allocate_and_assign_register(std::shared_ptr<InstructionSequence> &result_iseq, Operand op, bool def);
+    int allocate_register(std::shared_ptr<InstructionSequence> &result_iseq, HighLevelOpcode mov_opcode);
+    void allocate_and_assign_register(std::shared_ptr<InstructionSequence> &result_iseq, Operand op, bool def, HighLevelOpcode mov_opcode);
 
   public:
     LocalRegisterAllocation(const std::shared_ptr<ControlFlowGraph> &cfg);
