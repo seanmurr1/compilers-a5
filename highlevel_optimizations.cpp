@@ -603,7 +603,8 @@ std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(cons
 LocalRegisterAllocation::LocalRegisterAllocation(const std::shared_ptr<ControlFlowGraph> &cfg)
   : ControlFlowGraphTransform(cfg)
   , m_live_vregs(cfg)
-  , max_reg_spilled(0) {
+  , max_reg_spilled(0)
+  , max_reg_to_not_use(-1) {
     m_live_vregs.execute();
 }
 
@@ -629,8 +630,12 @@ int LocalRegisterAllocation::process_registers(const InstructionSequence *orig_b
       if (!op.has_base_reg()) continue;
 
       int reg = op.get_base_reg();
-      if (live_after.test(reg) || op.get_mreg() >= 0) 
+      if (live_after.test(reg) || op.get_mreg() >= 0) {
+        if (op.get_mreg() < 0 && reg > max_reg_to_not_use)
+          max_reg_to_not_use = reg;        
+        
         do_not_map.insert(reg);
+      }
 
       if (reg >= 1 && reg <= 6) 
         last_arg_reg_used++;
@@ -705,6 +710,11 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
   for (int i = 0; i < num_local_regs; i++)
     reverse_map[i] = -1;
 
+  if (max_reg_to_not_use == -1 || max_reg_to_not_use < 10)
+    first_spill_reg = 10;
+  else 
+    first_spill_reg = max_reg_to_not_use + 1;
+
 
   //printf("Do not map: {");
   //for (auto i : do_not_map) 
@@ -715,8 +725,9 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
   // Perform local register allocation
   local_allocation(orig_bb, result_iseq);
 
-  if (spill_locations.size() > max_reg_spilled)
-    max_reg_spilled = spill_locations.size();
+  int total_reg_needed = spill_locations.size() + (first_spill_reg - 10);
+  if (total_reg_needed > max_reg_spilled)
+    max_reg_spilled = total_reg_needed;
 
   return result_iseq;
 }
@@ -748,7 +759,7 @@ int LocalRegisterAllocation::allocate_register(std::shared_ptr<InstructionSequen
       spill_locations.push_back(true);
     }
     // Spill register
-    Operand spill_register(Operand::VREG, 10 + spill_index);
+    Operand spill_register(Operand::VREG, first_spill_reg + spill_index);
     Operand local_reg(Operand::VREG, local_reg_num);
     //result_iseq->append(new Instruction(HINS_mov_q, spill_register, local_reg));
     result_iseq->append(new Instruction(mov_opcode, spill_register, local_reg));
@@ -778,7 +789,7 @@ void LocalRegisterAllocation::allocate_and_assign_register(std::shared_ptr<Instr
     if (spilled_regs.count(reg) == 1) {
       // If value is currently spilled
       int spill_index = spilled_regs[reg];
-      prev_loc = Operand(Operand::VREG, 10 + spill_index); // TODO: should use op.get_kind() instead?
+      prev_loc = Operand(Operand::VREG, first_spill_reg + spill_index); // TODO: should use op.get_kind() instead?
       spilled_regs.erase(reg);
       spill_locations[spill_index] = false;
     }

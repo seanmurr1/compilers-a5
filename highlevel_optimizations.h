@@ -172,6 +172,9 @@ class LocalRegisterAllocation : public ControlFlowGraphTransform {
 
     int max_reg_spilled;
 
+    int max_reg_to_not_use;
+    int first_spill_reg;
+
     // Map VREG # to local register #
     std::unordered_map<int, int> local_reg_map;
 
