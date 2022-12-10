@@ -3,11 +3,21 @@
 #include "node.h"
 #include "cfg.h"
 
+/**
+ * Check for matching HL opcode.
+ **/ 
+bool match_hl(int base, int hl_opcode) {
+  return hl_opcode >= base && hl_opcode < (base + 4);
+}
+
 /*************** HL Optimizer ****************/
 HighLevelOptimizer::HighLevelOptimizer() { }
 
 HighLevelOptimizer::~HighLevelOptimizer() { }
 
+/**
+ * Perform all HL optimizations.
+ **/
 std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_ptr<InstructionSequence> &cur_hl_iseq) {
   Node *funcdef_ast = cur_hl_iseq->get_funcdef_ast();
 
@@ -73,9 +83,9 @@ std::shared_ptr<InstructionSequence> DeadStoreElimination::transform_basic_block
 
     if (HighLevel::is_def(orig_ins)) {
       Operand dest = orig_ins->get_operand(0);
-
       LiveVregs::FactType live_after = m_live_vregs.get_fact_after_instruction(orig_bb_as_basic_block, orig_ins);
 
+      // Make sure we don't kill function parameters/return values
       if (!live_after.test(dest.get_base_reg()) && dest.get_base_reg() > 6)
         // Dest register is immediately dead after this instruction
         // so it can be eliminated 
@@ -94,13 +104,6 @@ LocalValueNumbering::LocalValueNumbering(const std::shared_ptr<ControlFlowGraph>
   { }
 
 LocalValueNumbering::~LocalValueNumbering() { }
-
-/**
- * Check for matching HL opcode.
- **/ 
-bool match_hl(int base, int hl_opcode) {
-  return hl_opcode >= base && hl_opcode < (base + 4);
-}
 
 /**
  * Gets shift from 'b' variant of a HL opcode.
@@ -135,7 +138,6 @@ HighLevelOpcode get_mov_opcode(HighLevelOpcode opcode) {
   else {
     mov_shift = 3;
   }
-
   return (HighLevelOpcode) ((int) HINS_mov_b + mov_shift);
 }
 
@@ -143,7 +145,6 @@ HighLevelOpcode get_mov_opcode(HighLevelOpcode opcode) {
  * Gets operator type from a HL opcode.
  **/
 Operator get_operator(HighLevelOpcode opcode) {
-
   if (match_hl(HINS_add_b, opcode)) 
     return Operator::ADD;
   else if (match_hl(HINS_sub_b, opcode)) 
@@ -169,6 +170,7 @@ Operator get_operator(HighLevelOpcode opcode) {
   else 
     assert(false);
 
+  return Operator::ADD;
 }
 
 /**
@@ -219,7 +221,6 @@ void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> &re
     default:
       break;
   }
-
   HighLevelOpcode mov_opcode = get_mov_opcode(opcode);
   result_iseq->append(new Instruction(mov_opcode, dest, Operand(Operand::IMM_IVAL, result)));
 }
@@ -234,7 +235,6 @@ bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<Instruction
   Operand dest = orig_ins->get_operand(0);
   Operand left = orig_ins->get_operand(1);
   Operand right = orig_ins->get_operand(2);
-
   Operator op = get_operator(opcode);
   HighLevelOpcode mov_opcode = get_mov_opcode(opcode);
 
@@ -258,7 +258,6 @@ bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<Instruction
       result_iseq->append(new Instruction(mov_opcode, dest, Operand(Operand::IMM_IVAL, 0)));
       return true;
     }
-    // TODO: 0 - R => but we would need to emit negate instruction...?
   } else if (op == Operator::MUL) {
     // Identity: multiply by one
     if (left.has_imm_ival() && left.get_imm_ival() == 1) {
@@ -286,7 +285,6 @@ bool LocalValueNumbering::check_algebraic_identities(std::shared_ptr<Instruction
       return true;
     }
   }
-
   // Case: no identity
   return false;
 }
@@ -299,6 +297,9 @@ bool is_commutative(HighLevelOpcode opcode) {
       || match_hl(HINS_cmpneq_b, opcode);
 }
 
+/**
+ * Invalidate mappings for a changed operator in LVN map.
+ **/
 void LocalValueNumbering::invalidate_mappings(Operand op) {
   if (reverse_map.count(op) == 1) {
     // Invalidate previous bindings
@@ -314,6 +315,10 @@ void LocalValueNumbering::invalidate_mappings(Operand op) {
   }
 }
 
+/**
+ * Ensure that left register is less than right register in LVN key,
+ * or is only one register, that it is on the left.
+ **/
 void LocalValueNumbering::fix_commutativity(std::vector<Operand> &right_side) {
   bool swap = false;
   if (right_side[0].has_base_reg() && right_side[1].has_base_reg()) {
@@ -329,6 +334,9 @@ void LocalValueNumbering::fix_commutativity(std::vector<Operand> &right_side) {
   }
 }
 
+/**
+ * Process a defining instruction, applying LVN simplification.
+ **/
 void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq) {
   // For now assume num_operands = 3 (maybe deal with unary expressions later)
   unsigned num_operands = orig_ins->get_num_operands();
@@ -365,12 +373,9 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
   // Local Value Numbering
   left = right_side[0];
   right = right_side[1];
-
-  Operator op = get_operator(opcode); // TODO: maybe just use HighLevelOpcode to hash
-                                      // bc of sizing and all
+  Operator op = get_operator(opcode);
   // Create hash key
   LVN_key key(left, right, op);
-
   if (lvn_map.count(key) == 0) {
     // Key not present: append original instruction
     result_iseq->append(orig_ins->duplicate());
@@ -381,7 +386,6 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
     if (!(dest == to_copy))
       result_iseq->append(new Instruction(mov_opcode, dest, to_copy));
   }
-
   // Update maps
   lvn_map[key] = dest;
   reverse_map[dest].insert(key); 
@@ -395,7 +399,7 @@ void LocalValueNumbering::process_definition(Instruction *orig_ins, std::shared_
  * Apply LVN to a single block.
  **/
 std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(const InstructionSequence *orig_bb) {
-  // Clear map first
+  // Clear maps first
   lvn_map.clear();
   reverse_map.clear();
 
@@ -403,7 +407,6 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
 
   for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
     Instruction *orig_ins = *i;
-
     if (HighLevel::is_def(orig_ins)) {
       process_definition(orig_ins, result_iseq);
     } else {
@@ -411,14 +414,6 @@ std::shared_ptr<InstructionSequence> LocalValueNumbering::transform_basic_block(
     }
   }
   return result_iseq;
-
-
-  // TODO: issue: need to invalidate reverse mappings
-  // when we add a new mapping, need to invalidate all mappings
-  // that involve any of the registers (not constants) invovled in the 
-  // new mapping
-
-  // or maybe with localaddr????
 }
 
 /**
@@ -471,12 +466,10 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
     if (src.is_imm_ival()) {
       // Dest now tracks a constant: add to map
       constants_map[dest] = src.get_imm_ival();
-      //printf("vr%d now tracks constant: %d\n", reg, orig_ins->get_operand(1).get_imm_ival());
     } else {
       // Dest no longer tracks a constant: remove from map
       constants_map.erase(dest);
       constants_map.erase(dest.to_memref());
-      //printf("vr%d no longer tracks\n", reg);
       // Check second value
       if (constants_map.count(src) == 1) 
         src = Operand(Operand::IMM_IVAL, constants_map[src]);
@@ -490,11 +483,10 @@ void ConstantPropagation::process_definition(Instruction *orig_ins, std::shared_
     new_ops[0] = dest;
     for (int i = 1; i < num_operands; i++) {
       Operand op = orig_ins->get_operand(i);
-      if (op.has_base_reg() && constants_map.count(op) == 1) {
+      if (op.has_base_reg() && constants_map.count(op) == 1)
         // We have a copy stored
         op = Operand(Operand::IMM_IVAL, constants_map[op]);
-        //printf("Using %d in place of vr%d\n", constants_map[op], op.get_base_reg());
-      }        
+              
       new_ops[i] = op;
     }
     add_variable_length_ins(orig_ins, result_iseq, new_ops);
@@ -512,7 +504,6 @@ std::shared_ptr<InstructionSequence> ConstantPropagation::transform_basic_block(
 
   for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
     Instruction *orig_ins = *i;
-
     // Do not check call, return, etc. instructions (those with less than 2 operands)
     if (orig_ins->get_num_operands() < 2) 
       result_iseq->append(orig_ins->duplicate());
@@ -548,7 +539,6 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
         copy_map.erase(i);
         copy_map.erase(i.to_memref());
       }
-    reverse_mappings.clear();
     reverse_map.erase(dest);
   }
   
@@ -572,6 +562,8 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
     // Duplicate instruction
     result_iseq->append(orig_ins->duplicate());
   } else {
+    copy_map.erase(dest);
+    copy_map.erase(dest.to_memref());
     std::vector<Operand> new_ops(num_operands);
     new_ops[0] = dest;
     for (int i = 1; i < num_operands; i++) {
@@ -589,7 +581,7 @@ void CopyPropagation::process_definition(Instruction *orig_ins, std::shared_ptr<
  * Perform copy propagation on a single block.
  **/
 std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(const InstructionSequence *orig_bb) {
-  // Clear map first
+  // Clear maps first
   copy_map.clear();
   reverse_map.clear();
 
@@ -597,7 +589,6 @@ std::shared_ptr<InstructionSequence> CopyPropagation::transform_basic_block(cons
 
   for (auto i = orig_bb->cbegin(); i != orig_bb->cend(); i++) {
     Instruction *orig_ins = *i;
-
     // Do not check call, return, etc. instructions (those with less than 2 operands)
     if (orig_ins->get_num_operands() < 2) 
       result_iseq->append(orig_ins->duplicate());
@@ -636,6 +627,7 @@ int LocalRegisterAllocation::process_registers(const InstructionSequence *orig_b
     Instruction *orig_ins = *i;
     HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
     if (match_hl(HINS_div_b, opcode) || match_hl(HINS_mod_b, opcode))
+      // IDIVL requries use of EDX
       last_arg_reg_used = 3;
 
     int num_operands = orig_ins->get_num_operands();
@@ -690,7 +682,7 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
         allocate_and_assign_register(result_iseq, op, i == 0, mov_opcode);
       }
       
-      new_ops[i] = Operand(op.get_kind(), local_reg_map[reg]); // TODO: should this just be Operand::VREG? for kind...
+      new_ops[i] = Operand(op.get_kind(), local_reg_map[reg]); 
 
       currently_mapped.insert(reg);
       ops_mapped++;
@@ -763,7 +755,6 @@ int LocalRegisterAllocation::allocate_register(std::shared_ptr<InstructionSequen
     // Spill register
     Operand spill_register(Operand::VREG, first_spill_reg + spill_index);
     Operand local_reg(Operand::VREG, local_reg_num);
-    //result_iseq->append(new Instruction(HINS_mov_q, spill_register, local_reg));
     result_iseq->append(new Instruction(mov_opcode, spill_register, local_reg));
 
     // Update tracking of spilled registers
@@ -791,12 +782,10 @@ void LocalRegisterAllocation::allocate_and_assign_register(std::shared_ptr<Instr
     if (spilled_regs.count(reg) == 1) {
       // If value is currently spilled
       int spill_index = spilled_regs[reg];
-      prev_loc = Operand(Operand::VREG, first_spill_reg + spill_index); // TODO: should use op.get_kind() instead?
+      prev_loc = Operand(Operand::VREG, first_spill_reg + spill_index);
       spilled_regs.erase(reg);
       spill_locations[spill_index] = false;
     }
-
-    //result_iseq->append(new Instruction(HINS_mov_q, local_reg, prev_loc));
     result_iseq->append(new Instruction(mov_opcode, local_reg, prev_loc));
   }
 
@@ -809,9 +798,6 @@ void LocalRegisterAllocation::allocate_and_assign_register(std::shared_ptr<Instr
 int LocalRegisterAllocation::get_num_reg_spilled() {
   return max_reg_spilled;
 }
-
-// TODO: need to track largset number of spilled registers ever encountered
-// pass this to fundef to change storage needed for vregs...
 
 /*************** GLOBAL CALLEE SAVED REGISTER ASSIGNMENT ****************/
 GlobalCalleeSavedRegAssignment::GlobalCalleeSavedRegAssignment() { }

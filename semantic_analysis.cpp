@@ -631,7 +631,6 @@ void SemanticAnalysis::visit_unary_expression(Node *n) {
       {
         if (!is_lvalue(n->get_kid(1))) SemanticError::raise(n->get_loc(), "Cannot get address of non-lvalue");
         // Note that var had address taken
-        // TODO:ADDED
         if (n->get_kid(1)->get_tag() == AST_VARIABLE_REF) {
           n->get_kid(1)->get_symbol()->set_address_taken();
         }

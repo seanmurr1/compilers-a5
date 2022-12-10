@@ -103,7 +103,6 @@ class LocalValueNumbering : public ControlFlowGraphTransform {
     bool check_algebraic_identities(std::shared_ptr<InstructionSequence> &result_iseq, Instruction *orig_ins);
     void fix_commutativity(std::vector<Operand> &right_side);
     void process_definition(Instruction *orig_ins, std::shared_ptr<InstructionSequence> &result_iseq);
-
     void invalidate_mappings(Operand op);
 
   public:
@@ -150,28 +149,22 @@ class CopyPropagation : public ControlFlowGraphTransform {
 class LocalRegisterAllocation : public ControlFlowGraphTransform {
   private:
     LiveVregs m_live_vregs;
-    // Starting local reg # to use
-    int start_local_reg;
-    int num_local_regs;
-
-    // Local reg # to VREG #
-    std::vector<int> reverse_map;
+    int start_local_reg;            // Starting local reg # to use
+    int num_local_regs;             // Number of local regs available for allocation
+    std::vector<int> reverse_map;   // Local reg # to VREG # (local # is index)
     int cur_local_reg_idx;
 
     // Set of VREG #s that are alive at end of basic block and should not be mapped
     // or are already mapped to machine registers
     std::set<int> do_not_map;
-
     // Opearnds mapped in current instruction
     std::set<int> currently_mapped;
-
     // Map VREG # to spill location offset
     std::unordered_map<int, int> spilled_regs;
     // Available spill locations (vector of offsets)
     std::vector<bool> spill_locations;
 
     int max_reg_spilled;
-
     int max_reg_to_not_use;
     int first_spill_reg;
 
@@ -189,7 +182,6 @@ class LocalRegisterAllocation : public ControlFlowGraphTransform {
 
     virtual std::shared_ptr<InstructionSequence> transform_basic_block(const InstructionSequence *orig_bb);
     int get_num_reg_spilled();
-
 };
 
 /**

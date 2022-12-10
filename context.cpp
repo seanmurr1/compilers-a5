@@ -36,9 +36,6 @@
 #include "lowlevel_codegen.h"
 #include "context.h"
 
-// TODO
-#include "highlevel_optimizations.h"
-
 Context::Context()
   : m_ast(nullptr),
   m_next_str_identifier(0) {
@@ -189,11 +186,6 @@ void Context::highlevel_codegen(ModuleCollector *module_collector) {
       // about the function definition is needed by the low-level
       // code generator
       hl_iseq->set_funcdef_ast(child);
-
-      // TODO
-      HighLevelOptimizer hl_optimizer;
-      //hl_iseq = hl_optimizer.optimize(hl_iseq);
-      //////////////////////////////////////////////////////
 
       module_collector->collect_function(fn_name, hl_iseq);
 
