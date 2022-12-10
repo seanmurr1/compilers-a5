@@ -656,14 +656,14 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       Operand op = orig_ins->get_operand(i);
       if (!op.has_base_reg() || ops_mapped >= num_local_regs) {
         new_ops[i] = op;
-        printf("Not mapping non-reg\n");
+        //printf("Not mapping non-reg\n");
         continue;
       }
 
       int reg = op.get_base_reg();
       if (do_not_map.count(reg) == 1 || reg <= 6) {
         new_ops[i] = op;
-        printf("Not mapping reg %d\n", reg);
+        //printf("Not mapping reg %d\n", reg);
         continue;
       }
 
@@ -671,11 +671,11 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
       if (local_reg_map.count(reg) == 0) {
         HighLevelOpcode mov_opcode = get_mov_opcode((HighLevelOpcode) orig_ins->get_opcode());
         allocate_and_assign_register(result_iseq, op, i == 0, mov_opcode);
-        printf("%d mapped to %d\n", reg, local_reg_map[reg]);
+        //printf("%d mapped to %d\n", reg, local_reg_map[reg]);
       }
       
       new_ops[i] = Operand(op.get_kind(), local_reg_map[reg]); // TODO: should this just be Operand::VREG? for kind...
-      printf("Use %d in place of %d\n", local_reg_map[reg], reg);
+      //printf("Use %d in place of %d\n", local_reg_map[reg], reg);
 
       currently_mapped.insert(reg);
       ops_mapped++;
@@ -706,10 +706,10 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
     reverse_map[i] = -1;
 
 
-  printf("Do not map: {");
-  for (auto i : do_not_map) 
-    printf("%d,", i);
-  printf("}\n");
+  //printf("Do not map: {");
+  //for (auto i : do_not_map) 
+    //printf("%d,", i);
+  //printf("}\n");
   
 
   // Perform local register allocation
@@ -752,7 +752,7 @@ int LocalRegisterAllocation::allocate_register(std::shared_ptr<InstructionSequen
     Operand local_reg(Operand::VREG, local_reg_num);
     //result_iseq->append(new Instruction(HINS_mov_q, spill_register, local_reg));
     result_iseq->append(new Instruction(mov_opcode, spill_register, local_reg));
-    
+
     // Update tracking of spilled registers
     spilled_regs[to_spill] = spill_index;
     reverse_map[cur_local_reg_idx] = -1;
