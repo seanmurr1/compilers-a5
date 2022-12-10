@@ -187,7 +187,7 @@ void Context::highlevel_codegen(ModuleCollector *module_collector) {
       // high-level InstructionSequence: this is useful in case information
       // about the function definition is needed by the low-level
       // code generator
-      //hl_iseq->set_funcdef_ast(child);
+      hl_iseq->set_funcdef_ast(child);
 
       /////////////////////////////////////
       HighLevelOptimizer opt;
