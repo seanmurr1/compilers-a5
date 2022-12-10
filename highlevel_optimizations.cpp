@@ -668,6 +668,9 @@ void LocalRegisterAllocation::local_allocation(const InstructionSequence *orig_b
         allocate_and_assign_register(result_iseq, op, i == 0);
       
       new_ops[i] = Operand(op.get_kind(), local_reg_map[reg]); // TODO: should this just be Operand::VREG? for kind...
+
+      printf("%d mapped to %d\n", reg, local_reg_map[reg]);
+
       currently_mapped.insert(reg);
       ops_mapped++;
     }  
@@ -696,9 +699,10 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
     reverse_map[i] = -1;
 
 
-
+  printf("Do not map: {")
   for (auto i : do_not_map) 
-    printf("Do not map %d\n", i);
+    printf("%d,", i);
+  printf("}\n");
   
 
   // Perform local register allocation
