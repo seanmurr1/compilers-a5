@@ -177,10 +177,10 @@ Operator get_operator(HighLevelOpcode opcode) {
 void LocalValueNumbering::constant_fold(std::shared_ptr<InstructionSequence> &result_iseq, Instruction *orig_ins) {
   HighLevelOpcode opcode = (HighLevelOpcode) orig_ins->get_opcode();
   Operand dest = orig_ins->get_operand(0);
-  int left = orig_ins->get_operand(1).get_imm_ival();
-  int right = orig_ins->get_operand(2).get_imm_ival();
+  long left = orig_ins->get_operand(1).get_imm_ival();
+  long right = orig_ins->get_operand(2).get_imm_ival();
   Operator op = get_operator(opcode);
-  int result;
+  long result;
 
   switch (op) {
     case Operator::ADD:

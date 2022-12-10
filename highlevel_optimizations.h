@@ -119,7 +119,7 @@ class LocalValueNumbering : public ControlFlowGraphTransform {
 class ConstantPropagation : public ControlFlowGraphTransform {
   private:
     // Map VREG to constant value
-    std::unordered_map<Operand, int, OperandHasher> constants_map;
+    std::unordered_map<Operand, long, OperandHasher> constants_map;
 
   public:
     ConstantPropagation(const std::shared_ptr<ControlFlowGraph> &cfg);
