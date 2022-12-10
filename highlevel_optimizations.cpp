@@ -19,7 +19,7 @@ std::shared_ptr<InstructionSequence> HighLevelOptimizer::optimize(std::shared_pt
   HighLevelControlFlowGraphBuilder hl_cfg_builder(cur_hl_iseq);
   std::shared_ptr<ControlFlowGraph> cfg = hl_cfg_builder.build();
 
-  int num_iterations = 2;
+  int num_iterations = 3;
   for (int i = 0; i < num_iterations; i++) {
     // Constant propagation
     ConstantPropagation constant_prop(cfg);
