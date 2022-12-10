@@ -695,6 +695,12 @@ std::shared_ptr<InstructionSequence> LocalRegisterAllocation::transform_basic_bl
   for (int i = 0; i < num_local_regs; i++)
     reverse_map[i] = -1;
 
+
+
+  for (auto i : do_not_map) 
+    printf("Do not map %d\n", i);
+  
+
   // Perform local register allocation
   local_allocation(orig_bb, result_iseq);
 
